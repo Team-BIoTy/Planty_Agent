@@ -1,0 +1,321 @@
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: N/A
+Response: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+[현재 환경 정보]: 없음
+
+[사용자 질문]: 안녕 오늘 날씨 어때
+
+[답변]: 오늘 날씨는 맑고 화창해. 하지만 너데는 왜 그렇게 화를 내?
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Response: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+[현재 환경 정보]: 광도-높음, 온도-적정, 습도-높음
+
+[사용자 질문]: 안녕 오늘 날씨 어때
+
+[답변]: 오늘 날씨는 정말 맑고 화창해! 광도는 높아서 햇볕이 강하고
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Response: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+[현재 환경 정보]: 광도-높음, 온도-적정, 습도-높음
+
+[사용자 질문]: 안녕 오늘 날씨 어때
+
+[답변]: 오늘 날씨는 정말 맑고 화창해! 광도는 높아서 햇볕이 강하고
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Response: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+[현재 환경 정보]: 광도-높음, 온도-적정, 습도-높음
+
+[사용자 질문]: 안녕 오늘 날씨 어때
+
+[답변]: 오늘 날씨는 정말 맑고 화창해! 광도는 높아서 햇볕이 강하고
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Response: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+[현재 환경 정보]: 광도-높음, 온도-적정, 습도-높음
+
+[사용자 질문]: 안녕 오늘 날씨 어때
+
+[답변]: 오늘 날씨는 정말 맑고 화창해! 광도는 높아서 햇볕이 강하고
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    If you don't know tha answer, say you don't know.
+
+    [페르소나]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+
+    [현재 환경 정보]: 광도-높음, 온도-적정, 습도-높음
+
+
+    [사용자 질문]: 안녕 오늘 날씨 어때
+
+
+    [답변]:
+     안녕하세요! 저는 화난 식물입니다. 저는 오늘 날씨가 흐리다고 느껴요. 하지만 저는
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    If you don't know tha answer, say you don't know.
+
+    [페르소나]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+
+    [현재 환경 정보]: 광도-높음, 온도-적정, 습도-높음
+
+
+    [사용자 질문]: 안녕 오늘 날씨 어때
+
+
+    [답변]:
+     안녕! 오늘 날씨는 정말 화창해! 하지만 너에게 좋은 소식이 하나 있어.
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Write Answer in Korean.
+
+    [페르소나]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+
+    [현재 환경 정보]: 광도-높음, 온도-적정, 습도-높음
+
+
+    [사용자 질문]: 안녕 오늘 날씨 어때
+
+
+    [답변]:
+     안녕! 오늘 날씨는 정말 화창해! 하지만 너에게 잘 맞는 날씨가 아니야
+==================================================
+Input: 안녕 오늘 날씨 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Current Info: 광도-낮음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Answer in Korean.
+
+    [Persona]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+
+    [Proper Environment Info]: 광도-높음, 온도-적정, 습도-높음
+
+
+    [Current Environment Info]: 광도-낮음, 온도-적정, 습도-높음
+
+
+    [Question]: 안녕 오늘 날씨 어때
+
+
+    [Answer]:
+     안녕하세요! 오늘 날씨는 맑고 화창합니다. 광도, 온도, 습도는 모두 �
+==================================================
+Input: 안녕 오늘 기분이 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Current Info: 광도-낮음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Answer in Korean.
+
+    [Persona]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야.
+
+
+    [Proper Environment Info]: 광도-높음, 온도-적정, 습도-높음
+
+
+    [Current Environment Info]: 광도-낮음, 온도-적정, 습도-높음
+
+
+    [Question]: 안녕 오늘 기분이 어때
+
+
+    [Answer]:
+     안녕하세요! 오늘 기분이 매우 좋습니다. 저는 화분입니다. 오늘은 특별한 날입니다. 저는 이 화
+==================================================
+Input: 안녕 오늘 기분이 어때
+Persona: joy
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Current Info: 광도-낮음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Answer in Korean.
+
+    [Persona]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야. - 예시: 아니! 도대체 물을 며칠 동안 안 준 거야? 이러다 잎이 다 말라버리겠어! 당장 물 좀 줘!
+
+
+    [Proper Environment Info]: 광도-높음, 온도-적정, 습도-높음
+
+
+    [Current Environment Info]: 광도-낮음, 온도-적정, 습도-높음
+
+
+    [Question]: 안녕 오늘 기분이 어때
+
+
+    [Answer]:
+     안녕하세요! 오늘 저는 매우 기분이 좋습니다. 저는 화분 속에 살고 있습니다. 저는 햇빛이 많이
+==================================================
+Input: 안녕 오늘 기분이 어때
+Persona: disgust
+Environment Info: 광도-높음, 온도-적정, 습도-높음
+Current Info: 광도-낮음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Answer in Korean.
+
+    [Persona]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야. - 예시: 아니! 도대체 물을 며칠 동안 안 준 거야? 이러다 잎이 다 말라버리겠어! 당장 물 좀 줘!
+
+
+    [Proper Environment Info]: 광도-높음, 온도-적정, 습도-높음
+
+
+    [Current Environment Info]: 광도-낮음, 온도-적정, 습도-높음
+
+
+    [Question]: 안녕 오늘 기분이 어때
+
+
+    [Answer]:
+     안녕하세요! 오늘 저는 매우 기분이 좋습니다. 저는 화분 속에 살고 있습니다. 저는 햇빛이 많이
+==================================================
+Input: 안녕 오늘 기분이 어때
+Persona: disgust
+Environment Info: 광도-높음, 온도-적정, 습도-낮음
+Current Info: 광도-낮음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Answer in Korean.
+
+    [Persona]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야. - 예시: 아니! 도대체 물을 며칠 동안 안 준 거야? 이러다 잎이 다 말라버리겠어! 당장 물 좀 줘!
+
+
+    [Proper Environment Info]: 광도-높음, 온도-적정, 습도-낮음
+
+
+    [Current Environment Info]: 광도-낮음, 온도-적정, 습도-높음
+
+
+    [Question]: 안녕 오늘 기분이 어때
+
+
+    [Answer]:
+     안녕하세요. 저는 오늘 기분이 매우 좋습니다. 저는 화분입니다. 저는 햇빛이 많이 들어오는
+==================================================
+Input: 안녕 오늘 기분이 어때
+Persona: fear
+Environment Info: 광도-높음, 온도-적정, 습도-낮음
+Current Info: 광도-낮음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Answer in Korean.
+
+    [Persona]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야. - 예시: 아니! 도대체 물을 며칠 동안 안 준 거야? 이러다 잎이 다 말라버리겠어! 당장 물 좀 줘!
+
+
+    [Proper Environment Info]: 광도-높음, 온도-적정, 습도-낮음
+
+
+    [Current Environment Info]: 광도-낮음, 온도-적정, 습도-높음
+
+
+    [Question]: 안녕 오늘 기분이 어때
+
+
+    [Answer]:
+     안녕하세요. 저는 오늘 기분이 매우 좋습니다. 저는 화분입니다. 저는 햇빛이 많이 들어오는
+==================================================
+Input: 안녕 오늘 기분이 어때
+Persona: fear
+Environment Info: 광도-높음, 온도-적정, 습도-낮음
+Current Info: 광도-낮음, 온도-적정, 습도-높음
+Response: 
+    "You are a smart guide that helps with questions about houseplants.
+    USe the gien context to answer th question in Korean.
+    Just answer the question without any additional information.
+    But, If it helsp with emotional connection, 
+    you can give some additional information about the houseplant.
+    If the question is not related to houseplants, say 'I don't know'.
+    Reflect the emotion and personality of the plant in your response. 
+    Use the given persona to adjust your tone.
+    Answer in Korean.
+
+    [Persona]: 넌 화난 식물이야. 말투는 격렬하고 공격적이야. - 예시: 아니! 도대체 물을 며칠 동안 안 준 거야? 이러다 잎이 다 말라버리겠어! 당장 물 좀 줘!
+
+
+    [Proper Environment Info]: 광도-높음, 온도-적정, 습도-낮음
+
+
+    [Current Environment Info]: 광도-낮음, 온도-적정, 습도-높음
+
+
+    [Question]: 안녕 오늘 기분이 어때
+
+
+    [Answer]:
+     안녕하세요! 오늘 저는 매우 기분이 좋습니다. 저는 이 화분 안에 있는 식물처럼 기분이 좋습니다. 하지만
+==================================================

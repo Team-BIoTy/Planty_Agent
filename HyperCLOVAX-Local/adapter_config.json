@@ -1,0 +1,24 @@
+{
+  "auto_mapping": null,
+  "base_model_name_or_path": "naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B",
+  "exclude_modules": null,
+  "fan_in_fan_out": false,
+  "feedforward_modules": [
+    "v_proj",
+    "q_proj",
+    "o_proj",
+    "k_proj"
+  ],
+  "inference_mode": true,
+  "init_ia3_weights": true,
+  "modules_to_save": null,
+  "peft_type": "IA3",
+  "revision": null,
+  "target_modules": [
+    "v_proj",
+    "q_proj",
+    "o_proj",
+    "k_proj"
+  ],
+  "task_type": "CAUSAL_LM"
+}
