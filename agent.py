@@ -12,7 +12,16 @@ tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForCausalLM.from_pretrained(model_path)
 
 # 파이프라인 설정
-hf_pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer, device=0)
+hf_pipeline = pipeline(
+    "text-generation", 
+    model=model, 
+    tokenizer=tokenizer, 
+    device=0,
+    max_new_tokens=512,
+    return_full_text = False,
+    do_sample=True,
+    eos_token_id=tokenizer.eos_token_id,
+)
 
 # 랭크 모델 설정
 lm = HuggingFacePipeline(pipeline=hf_pipeline, model_kwargs={"temperature": 0.7})
@@ -123,7 +132,7 @@ app = graph.compile()
 # 예시 실행
 output = app.invoke({
     "input": "안녕! 오늘 기분이 어때?",
-    "persona": "anger",
+    "persona": "joy",
     "env_info": "광도-높음, 온도-적정, 습도-낮음",
     "cur_info": "광도-낮음, 온도-적정, 습도-높음",
 })
