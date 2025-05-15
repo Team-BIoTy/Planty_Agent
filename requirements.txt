@@ -1,5 +1,9 @@
 langchain
 langgraph
-langchain_community
-langchain_huggingface
-langchain
+langchain-community
+langchain-huggingface
+python-dotenv
+chromadb
+langchain-cohere
+transformers
+peft

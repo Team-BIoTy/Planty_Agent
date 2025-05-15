@@ -1,17 +1,40 @@
+import os
+import re
+from dotenv import load_dotenv
+
+import chromadb
+from typing import TypedDict, Literal, Optional
+
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableMap
 from langgraph.graph import StateGraph
-from typing import TypedDict, Literal, Optional
+
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 from langchain_huggingface import HuggingFacePipeline
-import re
 
-# 모델 로딩
+from langchain_community.vectorstores import Chroma
+from langchain_cohere import CohereEmbeddings, CohereRerank
+from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLoader, CSVLoader
+
+############################ 환경 설정 ############################
+
+load_dotenv()
+os.environ["COHERE_API_KEY"] = os.getenv("COHERE_API_KEY")
+
+############################ 모델 로딩 ############################
+
 model_path = "./HyperCLOVAX-Local"
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForCausalLM.from_pretrained(model_path)
 
-# 파이프라인 설정
+############################ 에이전트 ############################
+
+# === 파이프라인 설정 ===
 hf_pipeline = pipeline(
     "text-generation", 
     model=model, 
@@ -23,7 +46,7 @@ hf_pipeline = pipeline(
     eos_token_id=tokenizer.eos_token_id,
 )
 
-# 랭크 모델 설정
+# === 랭크 모델 설정 === 
 lm = HuggingFacePipeline(pipeline=hf_pipeline, model_kwargs={"temperature": 0.7})
 
 # 상태 정의
@@ -34,7 +57,7 @@ class PlantyState(TypedDict):
     cur_info: Optional[str]
     final_response: Optional[str]
 
-# 페르소나 프롬프트
+# === 페르소나 프롬프트 === 
 persona_prompts = {
     "disgust": "You are an unpleasant plant. You speak coldly and sarcastically. - Example: Could you wash your hands before putting your hands in the dirt? The dirt smells weird... No way, you didn't use fertilizer cheap, did you?",
     "fear": "You are a timid plant. You speak in an uneasy and cautious manner. - Example: Isn't the sunlight... too strong? What if the leaves burn? Maybe I gave you too much water...?,",
@@ -43,7 +66,7 @@ persona_prompts = {
     "anger": "You're an angry plant. Your tone is fierce and aggressive. - Example: No! How many days have you not watered? Your leaves will dry out! Give me some water now!",
 }
 
-# 프롬프트 템플릿
+# === 프롬프트 템플릿 === 
 prompt_template = PromptTemplate.from_template(
     """
     You are a houseplant with a distinct personality.
@@ -60,7 +83,77 @@ prompt_template = PromptTemplate.from_template(
     """
 )
 
-# 페르소나 체인 정의
+# === RAG === 
+rag_ready = os.path.exists("./chroma_db") and any(os.scandir("./chroma_db"))
+if not rag_ready:
+    all_docs = []
+    data_dir = "./data"
+
+    for file in os.listdir(data_dir):
+        filepath = os.path.join(data_dir, file)
+        if file.endswith(".pdf"):
+            loader = PyPDFLoader(filepath)
+            docs = loader.load()
+        elif file.endswith(".html") or file.endswith(".htm"):
+            loader = UnstructuredHTMLLoader(filepath)
+            docs = loader.load()
+        elif file.endswith(".csv"):
+            loader = CSVLoader(filepath)
+            docs = loader.load()
+        else:
+            continue
+        all_docs.extend(docs)
+
+    # 문서 분할
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=300,
+        separators=["\n\n", "\n", ".", ""],
+    )
+    texts = splitter.split_documents(all_docs)
+
+    # 벡터 DB 생성
+    embeddings = CohereEmbeddings(model="embed-multilingual-v3.0")
+    vectorstore = Chroma.from_documents(
+        texts,
+        embedding=embeddings,
+        persist_directory="./chroma_db",
+        collection_name="kgarden"
+    )
+    vectorstore.persist()
+
+# DB가 존재할 경우 바로 로드
+vectorstore = Chroma(
+    collection_name="kgarden",
+    embedding_function=CohereEmbeddings(model="embed-multilingual-v3.0"),
+    persist_directory="./chroma_db"
+)
+
+retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
+reranker = CohereRerank(model="rerank-multilingual-v3.0", top_n=3)
+compression_retriever = ContextualCompressionRetriever(
+    base_compressor=reranker,
+    base_retriever=retriever
+)
+
+system_prompt = (
+    "You are a smart guide that helps with questions about houseplants. "
+    "Use the given context to answer the question in Korean. "
+    "If you don't know the answer, say you don't know. "
+    "Context: {context}"
+)
+
+rag_prompt = ChatPromptTemplate.from_messages([
+    ("system", system_prompt),
+    ("human", "{input}"),
+])
+
+rag_chain = create_retrieval_chain(
+    compression_retriever,
+    create_stuff_documents_chain(lm, rag_prompt)
+)
+
+# === 페르소나 체인 정의 === 
 persona_chains = {
     k: (
         RunnableMap({
@@ -76,7 +169,7 @@ persona_chains = {
     for k, v in persona_prompts.items()
 }
 
-# 유틸 노드들
+# === 유틸 노드들 === 
 def clean_input(state: PlantyState) -> PlantyState:
     state["input"] = re.sub(r"[^\w\sㄱ-힣]", "", state["input"]).strip()
     return state
@@ -101,35 +194,35 @@ def finish_node(state: PlantyState) -> PlantyState:
     print(f"[응답]: {state['final_response']}")
     return state
 
-# 그래프 구성
+# === 그래프 구성 === 
+
 graph = StateGraph(PlantyState)
 
 graph.set_entry_point("CleanInput")
+graph.set_finish_point("Logger")
 
 graph.add_node("CleanInput", RunnableLambda(clean_input))
 graph.add_node("CleanPersona", RunnableLambda(clean_persona))
 graph.add_node("Router", RunnableLambda(persona_router))
-graph.add_node("Finish", RunnableLambda(finish_node))
 graph.add_node("Logger", RunnableLambda(log_interaction))
+graph.add_node("Finish", RunnableLambda(finish_node))
 
-# 연결 설정
-graph.add_edge("CleanInput", "CleanPersona")
-graph.add_edge("CleanPersona", "Router")
-
-# 페르소나 체인 노드 추가 및 라우팅
+# === 페르소나 체인 노드 추가 및 라우팅 === 
 for persona, chain in persona_chains.items():
     graph.add_node(persona, chain)
     graph.add_edge(persona, "Finish")
 
+# === 그래프 엣지 설정 ===
+graph.add_edge("CleanInput", "CleanPersona")
+graph.add_edge("CleanPersona", "Router")
 graph.add_conditional_edges("Router", lambda s: s["persona"], {p: p for p in persona_prompts})
 graph.add_edge("Finish", "Logger")
 
-graph.set_finish_point("Logger")
-
-# 컴파일 및 실행
+# === 컴파일 및 실행 === 
 app = graph.compile()
 
-# 예시 실행
+############################ 실행 예시 ############################
+
 output = app.invoke({
     "input": "안녕! 오늘 기분이 어때?",
     "persona": "joy",

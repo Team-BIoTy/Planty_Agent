@@ -5,9 +5,9 @@
   "fan_in_fan_out": false,
   "feedforward_modules": [
     "v_proj",
-    "q_proj",
+    "k_proj",
     "o_proj",
-    "k_proj"
+    "q_proj"
   ],
   "inference_mode": true,
   "init_ia3_weights": true,
@@ -16,9 +16,9 @@
   "revision": null,
   "target_modules": [
     "v_proj",
-    "q_proj",
+    "k_proj",
     "o_proj",
-    "k_proj"
+    "q_proj"
   ],
   "task_type": "CAUSAL_LM"
 }
