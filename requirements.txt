@@ -7,3 +7,5 @@ chromadb
 langchain-cohere
 transformers
 peft
+pymysql
+json

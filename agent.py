@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 
 import chromadb
 from typing import TypedDict, Literal, Optional
+import pymysql
+import json
+from datetime import datetime
 
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableMap
@@ -31,6 +34,41 @@ os.environ["COHERE_API_KEY"] = os.getenv("COHERE_API_KEY")
 model_path = "./HyperCLOVAX-Local"
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForCausalLM.from_pretrained(model_path)
+
+############################ MySQL ############################
+
+def load_db_config(path="db_config.json"):
+    with open(path, "r") as f:
+        return json.load(f)
+
+def fetch_row_by_id(table_name, row_id=1, database="Planty"):
+    config = load_db_config()
+    config["database"] = database
+    
+    try:
+        connection = pymysql.connect(
+            host=config["host"],
+            port=config.get("port", 3306),
+            user=config["user"],
+            password=config["password"],
+            database=config["database"],
+            charset="utf8mb4",
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        
+        with connection.cursor() as cursor:
+            sql = f"SELECT * FROM {table_name} WHERE id = %s LIMIT 1;"
+            cursor.execute(sql, (row_id,))
+            result = cursor.fetchone()
+            return result
+            
+    except Exception as e:
+        print(f"{table_name} 테이블 조회 실패:", e)
+        return None
+        
+    finally:
+        if 'connection' in locals():
+            connection.close()
 
 ############################ 에이전트 ############################
 
@@ -223,9 +261,37 @@ app = graph.compile()
 
 ############################ 실행 예시 ############################
 
-output = app.invoke({
-    "input": "안녕! 오늘 기분이 어때?",
-    "persona": "joy",
-    "env_info": "광도-높음, 온도-적정, 습도-낮음",
-    "cur_info": "광도-낮음, 온도-적정, 습도-높음",
-})
+if __name__ == "__main__":
+    # DB에서 환경 정보, 현재 상태, 챗봇 메시지 각각 id=1 로 불러오기
+    chat_message = fetch_row_by_id("chat_messages", 1) or {}
+    iot_device = fetch_row_by_id("iot_device", 1) or {}
+    plant_env_standard = fetch_row_by_id("plant_env_standards", 1) or {}
+
+    # env_info, cur_info 문자열 생성 예시 (필요하면 자유롭게 커스텀)
+    env_info_str = (
+        f"최대 습도: {plant_env_standard.get('max_humidity', '정보 없음')}, "
+        f"최대 광도: {plant_env_standard.get('max_light', '정보 없음')}, "
+        f"최대 온도: {plant_env_standard.get('max_temperature', '정보 없음')}, "
+        f"최소 습도: {plant_env_standard.get('min_humidity', '정보 없음')}, "
+        f"최소 광도: {plant_env_standard.get('min_light', '정보 없음')}, "
+        f"최소 온도: {plant_env_standard.get('min_temperature', '정보 없음')}"
+    )
+
+    cur_info_str = (
+        f"IoT 기기 상태 - 모델명: {iot_device.get('model_name', '정보 없음')}, "
+        f"상태: {iot_device.get('status', '정보 없음')}"
+    )
+
+    # 챗봇 질문도 DB에서 가져올 수 있지만, 임시로 고정
+    user_input = chat_message.get('message', '안녕! 오늘 기분이 어때?')
+
+    # 페르소나 선택 (예: joy)
+    persona_choice = "joy"
+
+    # 결과 출력
+    output = app.invoke({
+        "input": user_input,
+        "persona": persona_choice,
+        "env_info": env_info_str,
+        "cur_info": cur_info_str,
+    })
