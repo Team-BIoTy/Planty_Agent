@@ -2,6 +2,7 @@ langchain
 langgraph
 langchain-community
 langchain-huggingface
+langchain-chroma
 python-dotenv
 chromadb
 langchain-cohere
@@ -9,3 +10,4 @@ transformers
 peft
 pymysql
 json
+pymysqlpool

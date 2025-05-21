@@ -1,3 +1,5 @@
+# chatbot_app.py
+
 import os
 import re
 from dotenv import load_dotenv
@@ -15,7 +17,8 @@ from langgraph.graph import StateGraph
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 from langchain_huggingface import HuggingFacePipeline
 
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
+# from langchain_community.vectorstores import Chroma
 from langchain_cohere import CohereEmbeddings, CohereRerank
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain.chains import create_retrieval_chain
@@ -35,65 +38,30 @@ model_path = "./HyperCLOVAX-Local"
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 model = AutoModelForCausalLM.from_pretrained(model_path)
 
-############################ MySQL ############################
-
-def load_db_config(path="db_config.json"):
-    with open(path, "r") as f:
-        return json.load(f)
-
-def fetch_row_by_id(table_name, row_id=1, database="Planty"):
-    config = load_db_config()
-    config["database"] = database
-    
-    try:
-        connection = pymysql.connect(
-            host=config["host"],
-            port=config.get("port", 3306),
-            user=config["user"],
-            password=config["password"],
-            database=config["database"],
-            charset="utf8mb4",
-            cursorclass=pymysql.cursors.DictCursor
-        )
-        
-        with connection.cursor() as cursor:
-            sql = f"SELECT * FROM {table_name} WHERE id = %s LIMIT 1;"
-            cursor.execute(sql, (row_id,))
-            result = cursor.fetchone()
-            return result
-            
-    except Exception as e:
-        print(f"{table_name} 테이블 조회 실패:", e)
-        return None
-        
-    finally:
-        if 'connection' in locals():
-            connection.close()
-
-############################ 에이전트 ############################
-
-# === 파이프라인 설정 ===
 hf_pipeline = pipeline(
     "text-generation", 
     model=model, 
     tokenizer=tokenizer, 
     device=0,
-    max_new_tokens=512,
-    return_full_text = False,
-    do_sample=True,
+    max_new_tokens=256,
+    return_full_text=False,
+    do_sample=False,
     eos_token_id=tokenizer.eos_token_id,
 )
 
-# === 랭크 모델 설정 === 
 lm = HuggingFacePipeline(pipeline=hf_pipeline, model_kwargs={"temperature": 0.7})
 
-# 상태 정의
+############################ 상태 정의 ############################
+
 class PlantyState(TypedDict):
     input: str
     persona: Literal["disgust", "fear", "joy", "sadness", "anger"]
     env_info: Optional[str]
     cur_info: Optional[str]
     final_response: Optional[str]
+    chat_log: Optional[str]
+
+############################ 프롬프트 설정 ############################
 
 # === 페르소나 프롬프트 === 
 persona_prompts = {
@@ -112,6 +80,9 @@ prompt_template = PromptTemplate.from_template(
 		Your ultimate goal is to answer your owner's question in Korean based on the given persona.
 		You must absolutely adhere to the descriptions provided in the persona.
 
+        Here is the information about you:
+        [Plant's Nickname]: {nickname}
+
 		Your unique personality is defined as follows:
 		[Persona]: {persona_instruction}
 
@@ -120,6 +91,10 @@ prompt_template = PromptTemplate.from_template(
 
 		This is the information about your current environment:
 		[Current Environment Info]: {cur_info}
+
+        Here is your recent conversation with your owner:
+        [Recent Chat Log]: 
+        {chat_log}
 
 		Here is the question from your owner:
 		[Question]: {input}
@@ -131,7 +106,8 @@ prompt_template = PromptTemplate.from_template(
     """
 )
 
-# === RAG === 
+############################ RAG 설정 ############################
+
 rag_ready = os.path.exists("./chroma_db") and any(os.scandir("./chroma_db"))
 if not rag_ready:
     all_docs = []
@@ -141,36 +117,25 @@ if not rag_ready:
         filepath = os.path.join(data_dir, file)
         if file.endswith(".pdf"):
             loader = PyPDFLoader(filepath)
-            docs = loader.load()
         elif file.endswith(".html") or file.endswith(".htm"):
             loader = UnstructuredHTMLLoader(filepath)
-            docs = loader.load()
         elif file.endswith(".csv"):
             loader = CSVLoader(filepath)
-            docs = loader.load()
         else:
             continue
-        all_docs.extend(docs)
+        all_docs.extend(loader.load())
 
-    # 문서 분할
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=300,
-        separators=["\n\n", "\n", ".", ""],
+        chunk_size=1000, chunk_overlap=300, separators=["\n\n", "\n", ".", ""]
     )
     texts = splitter.split_documents(all_docs)
 
-    # 벡터 DB 생성
     embeddings = CohereEmbeddings(model="embed-multilingual-v3.0")
     vectorstore = Chroma.from_documents(
-        texts,
-        embedding=embeddings,
-        persist_directory="./chroma_db",
-        collection_name="kgarden"
+        texts, embedding=embeddings, persist_directory="./chroma_db", collection_name="kgarden"
     )
     vectorstore.persist()
 
-# DB가 존재할 경우 바로 로드
 vectorstore = Chroma(
     collection_name="kgarden",
     embedding_function=CohereEmbeddings(model="embed-multilingual-v3.0"),
@@ -201,107 +166,176 @@ rag_chain = create_retrieval_chain(
     create_stuff_documents_chain(lm, rag_prompt)
 )
 
-# === 페르소나 체인 정의 === 
-persona_chains = {
-    k: (
+############################ 그래프 노드 정의 ############################
+
+def make_persona_chain(persona: str, instruction: str):
+    def extract_final_response(out):
+        # out이 객체면 content만, 아니면 str형 변환 후 strip
+        if hasattr(out, "content"):
+            return {"final_response": out.content.strip()}
+        else:
+            return {"final_response": str(out).strip()}
+    return (
         RunnableMap({
             "input": lambda s: s["input"],
-            "persona_instruction": (lambda _, v=v: v),
+            "persona_instruction": lambda _: instruction,
             "env_info": lambda s: s.get("env_info", "없음"),
             "cur_info": lambda s: s.get("cur_info", "없음"),
+            "nickname": lambda s: s.get("nickname", "식물"),
+            "chat_log": lambda s: s.get("chat_log", "없음"),
         })
         | prompt_template
         | lm
-        | (lambda out: {"final_response": getattr(out, "content", out)})
+        | extract_final_response
     )
-    for k, v in persona_prompts.items()
-}
 
-# === 유틸 노드들 === 
+
+persona_chains = {k: make_persona_chain(k, v) for k, v in persona_prompts.items()}
+
+#################### 유틸리티 함수 ####################
+
 def clean_input(state: PlantyState) -> PlantyState:
     state["input"] = re.sub(r"[^\w\sㄱ-힣]", "", state["input"]).strip()
     return state
 
-def clean_persona(state: PlantyState) -> PlantyState:
-    state["persona"] = state["persona"].strip().lower()
+def normalize_persona(state: PlantyState) -> PlantyState:
+    state["persona"] = state["persona"].lower().strip()
     return state
 
-def persona_router(state: PlantyState) -> dict:
-    print(f"[Router Debug] Persona Received: '{state['persona']}'")  # 디버그 출력
+def router(state: PlantyState) -> dict:
     return {**state, "__branch__": state["persona"]}
 
-def log_interaction(state: PlantyState) -> PlantyState:
+def log_output(state: PlantyState) -> PlantyState:
     with open("planty_log.txt", "a", encoding="utf-8") as f:
-        f.write(f"Input: {state['input']}\nPersona: {state['persona']}\n")
-        f.write(f"Environment Info: {state.get('env_info', 'N/A')}\n")
-        f.write(f"Current Info: {state.get('cur_info', 'N/A')}\n")
-        f.write(f"Response: {state.get('final_response', '')}\n{'='*50}\n")
+        f.write(f"{datetime.now()}\nInput: {state['input']}\nPersona: {state['persona']}\n")
+        f.write(f"Env Info: {state.get('env_info')}\nCur Info: {state.get('cur_info')}\n")
+        f.write(f"Response: {state.get('final_response')}\n{'='*50}\n")
     return state
 
-def finish_node(state: PlantyState) -> PlantyState:
-    print(f"[응답]: {state['final_response']}")
-    return state
-
-# === 그래프 구성 === 
+############################ 그래프 구성 ############################
 
 graph = StateGraph(PlantyState)
-
-graph.set_entry_point("CleanInput")
+graph.set_entry_point("InputCleaner")
 graph.set_finish_point("Logger")
 
-graph.add_node("CleanInput", RunnableLambda(clean_input))
-graph.add_node("CleanPersona", RunnableLambda(clean_persona))
-graph.add_node("Router", RunnableLambda(persona_router))
-graph.add_node("Logger", RunnableLambda(log_interaction))
-graph.add_node("Finish", RunnableLambda(finish_node))
+# Core Nodes
+graph.add_node("InputCleaner", RunnableLambda(clean_input))
+graph.add_node("PersonaNormalizer", RunnableLambda(normalize_persona))
+graph.add_node("Router", RunnableLambda(router))
+graph.add_node("Logger", RunnableLambda(log_output))
 
-# === 페르소나 체인 노드 추가 및 라우팅 === 
+# Persona-specific Nodes
 for persona, chain in persona_chains.items():
     graph.add_node(persona, chain)
-    graph.add_edge(persona, "Finish")
+    graph.add_edge(persona, "Logger")
 
-# === 그래프 엣지 설정 ===
-graph.add_edge("CleanInput", "CleanPersona")
-graph.add_edge("CleanPersona", "Router")
+# Edges
+graph.add_edge("InputCleaner", "PersonaNormalizer")
+graph.add_edge("PersonaNormalizer", "Router")
 graph.add_conditional_edges("Router", lambda s: s["persona"], {p: p for p in persona_prompts})
-graph.add_edge("Finish", "Logger")
 
-# === 컴파일 및 실행 === 
 app = graph.compile()
 
-############################ 실행 예시 ############################
+############################ DB 유틸 ############################
 
-if __name__ == "__main__":
-    # DB에서 환경 정보, 현재 상태, 챗봇 메시지 각각 id=1 로 불러오기
-    chat_message = fetch_row_by_id("chat_messages", 1) or {}
-    iot_device = fetch_row_by_id("iot_device", 1) or {}
-    plant_env_standard = fetch_row_by_id("plant_env_standards", 1) or {}
+class DBClient:
+    def __init__(self, db_name="Planty", config_path="db_config.json"):
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        self.config = {
+            "host": config["host"],
+            "port": config.get("port", 3306),
+            "user": config["user"],
+            "password": config["password"],
+            "database": db_name,
+            "charset": "utf8mb4",
+            "cursorclass": pymysql.cursors.DictCursor
+        }
 
-    # env_info, cur_info 문자열 생성 예시 (필요하면 자유롭게 커스텀)
+    def query(self, sql, params=None):
+        try:
+            with pymysql.connect(**self.config) as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql, params)
+                    return cursor.fetchall()
+        except Exception as e:
+            print("DB 오류:", e)
+            return []
+
+    def query_one(self, sql, params=None):
+        results = self.query(sql, params)
+        return results[0] if results else {}
+
+def fetch_recent_chat_messages_by_room_id(chat_room_id: int, limit=5, max_chars=500) -> str:
+    db = DBClient()
+    sql = """
+        SELECT message FROM chat_messages
+        WHERE chat_room_id = %s
+        ORDER BY timestamp DESC
+        LIMIT %s;
+    """
+    rows = db.query(sql, (chat_room_id, limit))
+    messages = [row["message"] for row in reversed(rows)]
+    chat_log = "\n".join(messages)
+    return chat_log[-max_chars:] if len(chat_log) > max_chars else chat_log
+
+def fetch_chatbot_context(chat_room_id: int, sensor_log_id: int, plant_env_standards_id: int) -> dict:
+    db = DBClient()
+    sql = """
+        SELECT 
+            up.nickname,
+            pes.max_humidity, pes.max_light, pes.max_temperature,
+            pes.min_humidity, pes.min_light, pes.min_temperature,
+            sl.temperature AS sensor_temperature,
+            sl.humidity AS sensor_humidity,
+            sl.light AS sensor_light
+        FROM chat_rooms cr
+        JOIN user_plant up ON cr.user_plant_id = up.id
+        LEFT JOIN plant_env_standards pes ON pes.id = %s
+        LEFT JOIN sensor_logs sl ON sl.id = %s
+        WHERE cr.id = %s
+        LIMIT 1;
+    """
+
+    return db.query_one(sql, (plant_env_standards_id, sensor_log_id, chat_room_id)) or {}
+
+############################ 실행 함수 ############################
+
+def run_chatbot_with_ids(chat_room_id: int, sensor_log_id: int, plant_env_standards_id: int, persona: str = "joy", user_input: str = "") -> dict:
+    context = fetch_chatbot_context(chat_room_id, sensor_log_id, plant_env_standards_id)
+    chat_log = fetch_recent_chat_messages_by_room_id(chat_room_id)
+
+    nickname = context.get("nickname", "주인님")
     env_info_str = (
-        f"최대 습도: {plant_env_standard.get('max_humidity', '정보 없음')}, "
-        f"최대 광도: {plant_env_standard.get('max_light', '정보 없음')}, "
-        f"최대 온도: {plant_env_standard.get('max_temperature', '정보 없음')}, "
-        f"최소 습도: {plant_env_standard.get('min_humidity', '정보 없음')}, "
-        f"최소 광도: {plant_env_standard.get('min_light', '정보 없음')}, "
-        f"최소 온도: {plant_env_standard.get('min_temperature', '정보 없음')}"
+        f"최대 습도: {context.get('max_humidity', '정보 없음')}, "
+        f"최대 광도: {context.get('max_light', '정보 없음')}, "
+        f"최대 온도: {context.get('max_temperature', '정보 없음')}, "
+        f"최소 습도: {context.get('min_humidity', '정보 없음')}, "
+        f"최소 광도: {context.get('min_light', '정보 없음')}, "
+        f"최소 온도: {context.get('min_temperature', '정보 없음')}"
     )
 
     cur_info_str = (
-        f"IoT 기기 상태 - 모델명: {iot_device.get('model_name', '정보 없음')}, "
-        f"상태: {iot_device.get('status', '정보 없음')}"
+        f"센서 측정값 - 온도: {context.get('sensor_temperature', '정보 없음')}°C, "
+        f"습도: {context.get('sensor_humidity', '정보 없음')}%, "
+        f"광도: {context.get('sensor_light', '정보 없음')} lux, "
+        f"시간: {context.get('sensor_timestamp', '정보 없음')}"
     )
 
-    # 챗봇 질문도 DB에서 가져올 수 있지만, 임시로 고정
-    user_input = chat_message.get('message', '안녕! 오늘 기분이 어때?')
-
-    # 페르소나 선택 (예: joy)
-    persona_choice = "joy"
-
-    # 결과 출력
     output = app.invoke({
         "input": user_input,
-        "persona": persona_choice,
+        "persona": persona,
         "env_info": env_info_str,
         "cur_info": cur_info_str,
+        "nickname": nickname,
+        "chat_log": chat_log
     })
+
+    return output
+
+# ############################ 실행 예시 ############################
+
+# if __name__ == "__main__":
+#     result = run_chatbot_with_ids(chat_room_id=1, sensor_log_id=1, plant_env_standards_id=1, persona="joy", user_input="안녕, 오늘 날씨 어때?")
+#     print("=== 챗봇 응답 ===")
+#     print(result.get("final_response", "응답이 없습니다."))
