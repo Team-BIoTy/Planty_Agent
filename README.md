@@ -14,17 +14,16 @@ cd Planty_agent
 - `git clone`을 사용하여 코드 클론
 
 ### 모델 다운로드
-```
-# 모델 다운로드 
-huggingface-cli download yerim00/HyperCLOVAX-SEED-Text-Instruct-1.5B-planty-ia3 --local-dir HyperCLOVAX-Local
-```
-- 위의 코드를 실행하여 모델을 HyperCLOVAX-Local 폴더에 다운로드
+- download_model.py
 
 ## 환경세팅
 ### 가상환경
 ```
-# 새로운 가상환경
+# 새로운 가상환경 생성
 conda create -n planty
+
+# 새로운 가상환경 실행
+conda activate planty
 
 # 패키지 설치
 pip install -r requirements.txt
@@ -57,6 +56,6 @@ COHERE_API_KEY = "your_cohere_api"
 
 ## 서버 사용
 ```
-uvicorn chatbot_api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 - powershell에서 unicorn을 사용하여 서버 운영

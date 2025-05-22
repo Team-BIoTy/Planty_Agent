@@ -335,7 +335,7 @@ def run_chatbot_with_ids(chat_room_id: int, sensor_log_id: int, plant_env_standa
 
 # ############################ 실행 예시 ############################
 
-# if __name__ == "__main__":
-#     result = run_chatbot_with_ids(chat_room_id=1, sensor_log_id=1, plant_env_standards_id=1, persona="joy", user_input="안녕, 오늘 날씨 어때?")
-#     print("=== 챗봇 응답 ===")
-#     print(result.get("final_response", "응답이 없습니다."))
+if __name__ == "__main__":
+    result = run_chatbot_with_ids(chat_room_id=1, sensor_log_id=1, plant_env_standards_id=1, persona="joy", user_input="안녕, 오늘 날씨 어때?")
+    print("=== 챗봇 응답 ===")
+    print(result.get("final_response", "응답이 없습니다."))
