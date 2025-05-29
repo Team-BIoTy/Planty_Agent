@@ -1,10 +1,14 @@
-# chatbot_api.py
+# main.py
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Literal
 
+# 1. 로컬 모델을 사용
 from chatbot_app import run_chatbot_with_ids
+
+# 2. groq api를 사용
+# from groq_app import run_chatbot_with_ids
 
 app = FastAPI()
 

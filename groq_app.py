@@ -8,14 +8,12 @@ import chromadb
 from typing import TypedDict, Literal, Optional
 import pymysql
 import json
-from datetime import datetime
 
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableMap
 from langgraph.graph import StateGraph
 
-from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
-from langchain_huggingface import HuggingFacePipeline
+from langchain_groq import ChatGroq
 
 from langchain_chroma import Chroma
 from langchain_cohere import CohereEmbeddings, CohereRerank
@@ -30,25 +28,15 @@ from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLo
 
 load_dotenv()
 os.environ["COHERE_API_KEY"] = os.getenv("COHERE_API_KEY")
+os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 
 ############################ 모델 로딩 ############################
 
-model_path = "./HyperCLOVAX-Local"
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForCausalLM.from_pretrained(model_path)
-
-hf_pipeline = pipeline(
-    "text-generation", 
-    model=model, 
-    tokenizer=tokenizer, 
-    device=0,
-    max_new_tokens=256,
-    return_full_text=False,
-    do_sample=False,
-    eos_token_id=tokenizer.eos_token_id,
+lm = ChatGroq(
+    model="gemma2-9b-it", # Groq 모델 이름
+    temperature=0.7,
+    max_tokens=256,
 )
-
-lm = HuggingFacePipeline(pipeline=hf_pipeline, model_kwargs={"temperature": 0.7})
 
 ############################ 상태 정의 ############################
 
@@ -202,7 +190,7 @@ def normalize_persona(state: PlantyState) -> PlantyState:
 def router(state: PlantyState) -> dict:
     return {**state, "__branch__": state["persona"]}
 
-# 테스트를 위해 로그 기록이 필요하다면 주석을 해제
+# 로그기록이 필요한 경우 주석 해제
 def log_output(state: PlantyState) -> PlantyState:
     # with open("planty_log.txt", "a", encoding="utf-8") as f:
     #     f.write(f"{datetime.now()}\nInput: {state['input']}\nPersona: {state['persona']}\n")
@@ -299,12 +287,12 @@ def fetch_chatbot_context(chat_room_id: int, sensor_log_id: int, plant_env_stand
 
 ############################ 실행 함수 ############################
 
-# 데이터베이스에 저장된 정보를 기반으로 챗봇을 실행하는 함수
+# 데이터베이스에서 정보를 가져와 챗봇을 실행하는 함수
 def run_chatbot_with_ids(chat_room_id: int, sensor_log_id: int, plant_env_standards_id: int, persona: str = "joy", user_input: str = "") -> dict:
     context = fetch_chatbot_context(chat_room_id, sensor_log_id, plant_env_standards_id)
     chat_log = fetch_recent_chat_messages_by_room_id(chat_room_id)
 
-    nickname = context.get("nickname", "주인님")
+    nickname = context.get("nickname", "식물이이")
     env_info_str = (
         f"최대 습도: {context.get('max_humidity', '정보 없음')}, "
         f"최대 광도: {context.get('max_light', '정보 없음')}, "
@@ -372,7 +360,6 @@ def run_chatbot_with_direct_data(
 # ############################ 실행 예시 ############################
 
 if __name__ == "__main__":
-    # 데이터베이스에 저장된 정보를 기반으로 챗봇을 실행하는 예시
     # result = run_chatbot_with_ids(chat_room_id=1, sensor_log_id=1, plant_env_standards_id=1, persona="joy", user_input="안녕, 오늘 날씨 어때?")
     # print("=== 챗봇 응답 ===")
     # print(result.get("final_response", "응답이 없습니다."))

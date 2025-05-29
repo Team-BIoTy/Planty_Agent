@@ -1,0 +1,7 @@
+{
+  "host": "your_host_name.amazonaws.com",
+  "port": 3306,
+  "user": "your_user_name",
+  "password": "your_password",
+  "database": "your_database_name"
+}
