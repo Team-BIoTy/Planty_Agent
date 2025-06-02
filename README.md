@@ -1,3 +1,12 @@
+<img alt="Python" src ="https://img.shields.io/badge/Python-3776AB.svg?&style=for-the-badge&logo=Python&logoColor=white"/>
+<img alt="LangChain" src ="https://img.shields.io/badge/LangChain-1C3C3C.svg?&style=for-the-badge&logo=LangChain&logoColor=white"/>
+<img alt="LangGraph" src ="https://img.shields.io/badge/LangGraph-1C3C3C.svg?&style=for-the-badge&logo=LangGraph&logoColor=white"/>
+<img alt="MySQL" src ="https://img.shields.io/badge/MySQL-4479A1.svg?&style=for-the-badge&logo=MySQL&logoColor=white"/>
+<img alt="GitHub" src ="https://img.shields.io/badge/GitHub-181717.svg?&style=for-the-badge&logo=GitHub&logoColor=white"/>
+<img alt="Notion" src ="https://img.shields.io/badge/Notion-000000.svg?&style=for-the-badge&logo=Notion&logoColor=white"/>
+
+
+
 # 🌱 Planty Agent
 
 **Planty Project**에서 사용하는 LLM 기반 Agent입니다. 
@@ -11,8 +20,10 @@
 - **기능 구현**: 2025.05.14 - 2025.05.31
 - **기본 제공 모델**: [yerim00/HyperCLOVAX-SEED-Text-Instruct-1.5B-planty-ia3](yerim00/HyperCLOVAX-SEED-Text-Instruct-1.5B-planty-ia3)
 
-*기본 제공모델은 naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B 모델을 기반으로 파인튜닝한 모델로 파인튜닝 코드는 (Planty_LLM)[naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B]에서 확인 가능합니다. 
 
+*기본 제공모델은 naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B 모델을 기반으로 파인튜닝한 모델로 파인튜닝 코드는 [Planty_LLM](naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B)에서 확인 가능합니다. 
+
+</br>
 
 ## 📦 다운로드 및 설치
 
@@ -38,6 +49,7 @@ snapshot_download(
 
 * `model_download.py`를 실행하여 로컬에 CLOVAX 모델을 다운로드합니다.
 
+</br>
 
 ## ⚙️ 환경 설정
 
@@ -57,6 +69,7 @@ pip install -r requirements.txt
 - 파이썬 라이브러리 버전 충돌을 위해 가상환경을 세팅
 - 그냥 python에서 `pip install -r requirements.txt`만 해도 동작 가능
 
+</br>
 
 ## 🔐 API Key 등록 및 DB 연결
 
@@ -97,6 +110,7 @@ huggingface-cli login
 - `db_config_example.json` 파일의 이름을 `db_config.json`으로 변경
 - 사용자의 데이터베이스 정보에 맞게 수정
 
+</br>
 
 ## 🚀 서버 실행
 
@@ -108,7 +122,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 - `server_test.py`를 실행하여 서버 통신 테스트 가능
 
-
+</br>
 
 ## 🤖 챗봇 설정
 
@@ -144,7 +158,7 @@ Content-Type: application/json
 
 * `persona`는 다음 중 하나: `disgust`, `fear`, `joy`, `sadness`, `anger`
 
-
+</br>
 
 ## 🌐 Groq API 사용
 
@@ -160,7 +174,7 @@ lm = ChatGroq(
 
 > `main.py`에서 `chatbot_app` 대신 `groq_app`을 import 하면 Groq API를 통해 작동합니다.
 
-
+</br>
 
 ## 📁 프로젝트 구조
 
@@ -178,7 +192,7 @@ Planty_Agent/
 └── HyperCLOVAX-Local/       # 로컬 모델 저장 디렉토리
 ```
 
-
+</br>
 
 ## 🧪 참고 사항
 
