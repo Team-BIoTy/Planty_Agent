@@ -1,18 +1,16 @@
-<img alt="Python" src ="https://img.shields.io/badge/Python-3776AB.svg?&style=for-the-badge&logo=Python&logoColor=white"/>
-<img alt="LangChain" src ="https://img.shields.io/badge/LangChain-1C3C3C.svg?&style=for-the-badge&logo=LangChain&logoColor=white"/>
-<img alt="LangGraph" src ="https://img.shields.io/badge/LangGraph-1C3C3C.svg?&style=for-the-badge&logo=LangGraph&logoColor=white"/>
-<img alt="MySQL" src ="https://img.shields.io/badge/MySQL-4479A1.svg?&style=for-the-badge&logo=MySQL&logoColor=white"/>
-<img alt="GitHub" src ="https://img.shields.io/badge/GitHub-181717.svg?&style=for-the-badge&logo=GitHub&logoColor=white"/>
-<img alt="Notion" src ="https://img.shields.io/badge/Notion-000000.svg?&style=for-the-badge&logo=Notion&logoColor=white"/>
+<img alt="Python" src="https://img.shields.io/badge/Python-3776AB.svg?style=for-the-badge&logo=Python&logoColor=white" height="20"/><img alt="LangChain" src="https://img.shields.io/badge/LangChain-1C3C3C.svg?style=for-the-badge&logo=LangChain&logoColor=white" height="20"/>
+<img alt="LangGraph" src="https://img.shields.io/badge/LangGraph-1C3C3C.svg?style=for-the-badge&logo=LangGraph&logoColor=white" height="20"/>
+<img alt="MySQL" src="https://img.shields.io/badge/MySQL-4479A1.svg?style=for-the-badge&logo=MySQL&logoColor=white" height="20"/>
+<img alt="GitHub" src="https://img.shields.io/badge/GitHub-181717.svg?style=for-the-badge&logo=GitHub&logoColor=white" height="20"/>
+<img alt="Notion" src="https://img.shields.io/badge/Notion-000000.svg?style=for-the-badge&logo=Notion&logoColor=white" height="20"/>
 
-
+</br>
 
 # 🌱 Planty Agent
 
 **Planty Project**에서 사용하는 LLM 기반 Agent입니다. 
 
 식물 환경 센서 정보와 감정 기반 페르소나를 반영하여 자연스럽고 상황에 맞는 대화를 제공합니다.
-
 
 ### 프로젝트 개요
 - **전체 개발 기간**: 
