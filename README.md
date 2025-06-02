@@ -4,7 +4,15 @@
 
 식물 환경 센서 정보와 감정 기반 페르소나를 반영하여 자연스럽고 상황에 맞는 대화를 제공합니다.
 
----
+
+### 프로젝트 개요
+- **전체 개발 기간**: 
+- **Agent 설계**: 2025.05.01 - 2025.05.07
+- **기능 구현**: 2025.05.14 - 2025.05.31
+- **기본 제공 모델**: [yerim00/HyperCLOVAX-SEED-Text-Instruct-1.5B-planty-ia3](yerim00/HyperCLOVAX-SEED-Text-Instruct-1.5B-planty-ia3)
+
+*기본 제공모델은 naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B 모델을 기반으로 파인튜닝한 모델로 파인튜닝 코드는 (Planty_LLM)[naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B]에서 확인 가능합니다. 
+
 
 ## 📦 다운로드 및 설치
 
@@ -30,7 +38,6 @@ snapshot_download(
 
 * `model_download.py`를 실행하여 로컬에 CLOVAX 모델을 다운로드합니다.
 
----
 
 ## ⚙️ 환경 설정
 
@@ -50,7 +57,6 @@ pip install -r requirements.txt
 - 파이썬 라이브러리 버전 충돌을 위해 가상환경을 세팅
 - 그냥 python에서 `pip install -r requirements.txt`만 해도 동작 가능
 
----
 
 ## 🔐 API Key 등록 및 DB 연결
 
@@ -91,7 +97,6 @@ huggingface-cli login
 - `db_config_example.json` 파일의 이름을 `db_config.json`으로 변경
 - 사용자의 데이터베이스 정보에 맞게 수정
 
----
 
 ## 🚀 서버 실행
 
@@ -103,7 +108,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 - `server_test.py`를 실행하여 서버 통신 테스트 가능
 
----
+
 
 ## 🤖 챗봇 설정
 
@@ -139,7 +144,7 @@ Content-Type: application/json
 
 * `persona`는 다음 중 하나: `disgust`, `fear`, `joy`, `sadness`, `anger`
 
----
+
 
 ## 🌐 Groq API 사용
 
@@ -155,7 +160,7 @@ lm = ChatGroq(
 
 > `main.py`에서 `chatbot_app` 대신 `groq_app`을 import 하면 Groq API를 통해 작동합니다.
 
----
+
 
 ## 📁 프로젝트 구조
 
@@ -173,7 +178,7 @@ Planty_Agent/
 └── HyperCLOVAX-Local/       # 로컬 모델 저장 디렉토리
 ```
 
----
+
 
 ## 🧪 참고 사항
 
@@ -181,4 +186,3 @@ Planty_Agent/
 * 식물 상태에 따른 맞춤형 응답 및 감정 기반 페르소나 설정 지원
 * Chroma + Cohere 기반 문서 검색 및 Reranking 지원
 
----
