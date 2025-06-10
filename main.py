@@ -2,13 +2,13 @@
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Literal
+from typing import Literal, Optional
 
 # 1. 로컬 모델을 사용
-from chatbot_app import run_chatbot_with_ids
+# from chatbot_app import run_chatbot_with_ids
 
 # 2. groq api를 사용
-# from groq_app import run_chatbot_with_ids
+from groq_app import run_chatbot_with_ids
 
 app = FastAPI()
 
@@ -18,6 +18,7 @@ class ChatRequest(BaseModel):
     plant_env_standards_id: int
     persona: Literal["disgust", "fear", "joy", "sadness", "anger"]
     user_input: str
+    plant_info: Optional[dict] = None
 
 class ChatResponse(BaseModel):
     final_response: str
@@ -31,6 +32,7 @@ def chat_endpoint(request: ChatRequest):
             plant_env_standards_id=request.plant_env_standards_id,
             persona=request.persona,
             user_input=request.user_input,
+            plant_info=request.plant_info
         )
         final_resp = output.get("final_response", "응답이 없습니다.")
         return ChatResponse(final_response=final_resp)

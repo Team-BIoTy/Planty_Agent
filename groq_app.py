@@ -47,6 +47,7 @@ class PlantyState(TypedDict):
     cur_info: Optional[str]
     final_response: Optional[str]
     chat_log: Optional[str]
+    plant_info: Optional[str]
 
 ############################ 프롬프트 설정 ############################
 
@@ -72,6 +73,9 @@ prompt_template = PromptTemplate.from_template(
     Your unique personality:
     [Persona]: {persona_instruction}
 
+    Plant Species Information:
+    [Plant Info]: {plant_info}
+
     Ideal Living Information:
     [Appropriate environmental information]: {env_info}
 
@@ -84,7 +88,7 @@ prompt_template = PromptTemplate.from_template(
     Question from the user:
     [Question]: {input}
 
-    Answer the user's questions considering cur_info, chat_log, plant, nickname, persona, and env_info.
+    Answer the user's questions considering all the provided information.
     The answer must clearly include the persona provided.
 
     [Answer]:
@@ -168,6 +172,7 @@ def make_persona_chain(persona: str, instruction: str):
             "cur_info": lambda s: s.get("cur_info", "없음"),
             "nickname": lambda s: s.get("nickname", "식물"),
             "chat_log": lambda s: s.get("chat_log", "없음"),
+            "plant_info": lambda s: s.get("plant_info", "없음"),
         })
         | prompt_template
         | lm
@@ -186,6 +191,32 @@ def clean_input(state: PlantyState) -> PlantyState:
 def normalize_persona(state: PlantyState) -> PlantyState:
     state["persona"] = state["persona"].lower().strip()
     return state
+
+def format_plant_info(plant_info: dict) -> str:
+    def val(k): return plant_info.get(k) or "-"
+    return (
+        f"[기본 정보]\n"
+        f"이름: {val('commonName')}\n"
+        f"학명: {val('scientificName')}\n"
+        f"영명: {val('englishName')}\n"
+        f"유통명: {val('tradeName')}\n"
+        f"과명: {val('familyName')}\n"
+        f"원산지: {val('origin')}\n"
+        f"관리 팁: {val('careTip')}\n\n"
+        f"[생육정보]\n"
+        f"형태: {val('growthForm')}, 높이: {val('growthHeight')}, 너비: {val('growthWidth')}, 생태형: {val('ecologicalType')}, "
+        f"잎형태: {val('leafShape')}, 무늬: {val('leafPattern')}, 잎색: {val('leafColor')}\n\n"
+        f"[꽃/열매]\n"
+        f"개화 시기: {val('floweringSeason')}, 꽃색: {val('flowerColor')}, 열매 시기: {val('fruitingSeason')}, 열매색: {val('fruitColor')}, 향기: {val('fragrance')}\n\n"
+        f"[관리 정보]\n"
+        f"광요구도: {val('lightRequirement')}, 적정 온도: {val('optimalTemperature')}, 겨울 최저온도: {val('minWinterTemperature')}, 습도: {val('humidity')}, "
+        f"비료: {val('fertilizer')}, 토양: {val('soilType')}, 생장 속도: {val('growthRate')}, 관리수준: {val('careLevel')}\n"
+        f"물주기 (봄/여름/가을/겨울): {val('wateringSpring')}/{val('wateringSummer')}/{val('wateringAutumn')}/{val('wateringWinter')}\n"
+        f"병충해: {val('pestsDiseases')}\n\n"
+        f"[기능성 정보]\n"
+        f"{val('functionalInfo')}"
+    )
+
 
 def router(state: PlantyState) -> dict:
     return {**state, "__branch__": state["persona"]}
@@ -288,7 +319,14 @@ def fetch_chatbot_context(chat_room_id: int, sensor_log_id: int, plant_env_stand
 ############################ 실행 함수 ############################
 
 # 데이터베이스에서 정보를 가져와 챗봇을 실행하는 함수
-def run_chatbot_with_ids(chat_room_id: int, sensor_log_id: int, plant_env_standards_id: int, persona: str = "joy", user_input: str = "") -> dict:
+def run_chatbot_with_ids(
+    chat_room_id: int,
+    sensor_log_id: int,
+    plant_env_standards_id: int,
+    persona: str = "joy",
+    user_input: str = "",
+    plant_info: dict | None = None
+) -> dict:
     context = fetch_chatbot_context(chat_room_id, sensor_log_id, plant_env_standards_id)
     chat_log = fetch_recent_chat_messages_by_room_id(chat_room_id)
 
@@ -309,13 +347,16 @@ def run_chatbot_with_ids(chat_room_id: int, sensor_log_id: int, plant_env_standa
         f"시간: {context.get('sensor_timestamp', '정보 없음')}"
     )
 
+    plant_info_str = format_plant_info(plant_info or {})
+
     output = app.invoke({
         "input": user_input,
         "persona": persona,
         "env_info": env_info_str,
         "cur_info": cur_info_str,
         "nickname": nickname,
-        "chat_log": chat_log
+        "chat_log": chat_log,
+        "plant_info": plant_info_str,
     })
 
     return output
