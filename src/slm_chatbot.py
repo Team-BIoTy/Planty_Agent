@@ -8,12 +8,14 @@ import chromadb
 from typing import TypedDict, Literal, Optional
 import pymysql
 import json
+from datetime import datetime
 
 from langchain.prompts import PromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnableMap
 from langgraph.graph import StateGraph
 
-from langchain_groq import ChatGroq
+from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+from langchain_huggingface import HuggingFacePipeline
 
 from langchain_chroma import Chroma
 from langchain_cohere import CohereEmbeddings, CohereRerank
@@ -28,15 +30,25 @@ from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLo
 
 load_dotenv()
 os.environ["COHERE_API_KEY"] = os.getenv("COHERE_API_KEY")
-os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 
 ############################ 모델 로딩 ############################
 
-lm = ChatGroq(
-    model="gemma2-9b-it", # Groq 모델 이름
-    temperature=0.7,
-    max_tokens=256,
+model_path = "./HyperCLOVAX-Local"
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+model = AutoModelForCausalLM.from_pretrained(model_path)
+
+hf_pipeline = pipeline(
+    "text-generation", 
+    model=model, 
+    tokenizer=tokenizer, 
+    device=0,
+    max_new_tokens=256,
+    return_full_text=False,
+    do_sample=False,
+    eos_token_id=tokenizer.eos_token_id,
 )
+
+lm = HuggingFacePipeline(pipeline=hf_pipeline, model_kwargs={"temperature": 0.7})
 
 ############################ 상태 정의 ############################
 
@@ -47,7 +59,6 @@ class PlantyState(TypedDict):
     cur_info: Optional[str]
     final_response: Optional[str]
     chat_log: Optional[str]
-    plant_info: Optional[str]
 
 ############################ 프롬프트 설정 ############################
 
@@ -73,9 +84,6 @@ prompt_template = PromptTemplate.from_template(
     Your unique personality:
     [Persona]: {persona_instruction}
 
-    Plant Species Information:
-    [Plant Info]: {plant_info}
-
     Ideal Living Information:
     [Appropriate environmental information]: {env_info}
 
@@ -88,7 +96,7 @@ prompt_template = PromptTemplate.from_template(
     Question from the user:
     [Question]: {input}
 
-    Answer the user's questions considering all the provided information.
+    Answer the user's questions considering cur_info, chat_log, plant, nickname, persona, and env_info.
     The answer must clearly include the persona provided.
 
     [Answer]:
@@ -172,7 +180,6 @@ def make_persona_chain(persona: str, instruction: str):
             "cur_info": lambda s: s.get("cur_info", "없음"),
             "nickname": lambda s: s.get("nickname", "식물"),
             "chat_log": lambda s: s.get("chat_log", "없음"),
-            "plant_info": lambda s: s.get("plant_info", "없음"),
         })
         | prompt_template
         | lm
@@ -192,36 +199,10 @@ def normalize_persona(state: PlantyState) -> PlantyState:
     state["persona"] = state["persona"].lower().strip()
     return state
 
-def format_plant_info(plant_info: dict) -> str:
-    def val(k): return plant_info.get(k) or "-"
-    return (
-        f"[기본 정보]\n"
-        f"이름: {val('commonName')}\n"
-        f"학명: {val('scientificName')}\n"
-        f"영명: {val('englishName')}\n"
-        f"유통명: {val('tradeName')}\n"
-        f"과명: {val('familyName')}\n"
-        f"원산지: {val('origin')}\n"
-        f"관리 팁: {val('careTip')}\n\n"
-        f"[생육정보]\n"
-        f"형태: {val('growthForm')}, 높이: {val('growthHeight')}, 너비: {val('growthWidth')}, 생태형: {val('ecologicalType')}, "
-        f"잎형태: {val('leafShape')}, 무늬: {val('leafPattern')}, 잎색: {val('leafColor')}\n\n"
-        f"[꽃/열매]\n"
-        f"개화 시기: {val('floweringSeason')}, 꽃색: {val('flowerColor')}, 열매 시기: {val('fruitingSeason')}, 열매색: {val('fruitColor')}, 향기: {val('fragrance')}\n\n"
-        f"[관리 정보]\n"
-        f"광요구도: {val('lightRequirement')}, 적정 온도: {val('optimalTemperature')}, 겨울 최저온도: {val('minWinterTemperature')}, 습도: {val('humidity')}, "
-        f"비료: {val('fertilizer')}, 토양: {val('soilType')}, 생장 속도: {val('growthRate')}, 관리수준: {val('careLevel')}\n"
-        f"물주기 (봄/여름/가을/겨울): {val('wateringSpring')}/{val('wateringSummer')}/{val('wateringAutumn')}/{val('wateringWinter')}\n"
-        f"병충해: {val('pestsDiseases')}\n\n"
-        f"[기능성 정보]\n"
-        f"{val('functionalInfo')}"
-    )
-
-
 def router(state: PlantyState) -> dict:
     return {**state, "__branch__": state["persona"]}
 
-# 로그기록이 필요한 경우 주석 해제
+# 테스트를 위해 로그 기록이 필요하다면 주석을 해제
 def log_output(state: PlantyState) -> PlantyState:
     # with open("planty_log.txt", "a", encoding="utf-8") as f:
     #     f.write(f"{datetime.now()}\nInput: {state['input']}\nPersona: {state['persona']}\n")
@@ -318,19 +299,12 @@ def fetch_chatbot_context(chat_room_id: int, sensor_log_id: int, plant_env_stand
 
 ############################ 실행 함수 ############################
 
-# 데이터베이스에서 정보를 가져와 챗봇을 실행하는 함수
-def run_chatbot_with_ids(
-    chat_room_id: int,
-    sensor_log_id: int,
-    plant_env_standards_id: int,
-    persona: str = "joy",
-    user_input: str = "",
-    plant_info: dict | None = None
-) -> dict:
+# 데이터베이스에 저장된 정보를 기반으로 챗봇을 실행하는 함수
+def run_chatbot_with_ids(chat_room_id: int, sensor_log_id: int, plant_env_standards_id: int, persona: str = "joy", user_input: str = "") -> dict:
     context = fetch_chatbot_context(chat_room_id, sensor_log_id, plant_env_standards_id)
     chat_log = fetch_recent_chat_messages_by_room_id(chat_room_id)
 
-    nickname = context.get("nickname", "식물이이")
+    nickname = context.get("nickname", "주인님")
     env_info_str = (
         f"최대 습도: {context.get('max_humidity', '정보 없음')}, "
         f"최대 광도: {context.get('max_light', '정보 없음')}, "
@@ -347,16 +321,13 @@ def run_chatbot_with_ids(
         f"시간: {context.get('sensor_timestamp', '정보 없음')}"
     )
 
-    plant_info_str = format_plant_info(plant_info or {})
-
     output = app.invoke({
         "input": user_input,
         "persona": persona,
         "env_info": env_info_str,
         "cur_info": cur_info_str,
         "nickname": nickname,
-        "chat_log": chat_log,
-        "plant_info": plant_info_str,
+        "chat_log": chat_log
     })
 
     return output
@@ -401,6 +372,7 @@ def run_chatbot_with_direct_data(
 # ############################ 실행 예시 ############################
 
 if __name__ == "__main__":
+    # 데이터베이스에 저장된 정보를 기반으로 챗봇을 실행하는 예시
     # result = run_chatbot_with_ids(chat_room_id=1, sensor_log_id=1, plant_env_standards_id=1, persona="joy", user_input="안녕, 오늘 날씨 어때?")
     # print("=== 챗봇 응답 ===")
     # print(result.get("final_response", "응답이 없습니다."))
@@ -424,14 +396,20 @@ if __name__ == "__main__":
 
     chat_log = "안녕하세요! 오늘은 물을 잘 줬어요.\n기분이 어때요?"
     
+    import time
+    
+    # 속도 테스트
+    start_time = time.time()
+
     result = run_chatbot_with_direct_data(
         nickname="플로라",
         env_info_dict=env_info,
         cur_info_dict=cur_info,
         chat_log=chat_log,
         persona="joy",
-        user_input="안녕, 오늘 날씨 어때?"
+        user_input="오늘 기분이 어때?"
     )
 
     print("=== 챗봇 응답 ===")
     print(result.get("final_response", "응답이 없습니다."))
+    print(f"소요 시간: {time.time() - start_time:.2f}초")

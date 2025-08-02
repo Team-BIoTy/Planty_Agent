@@ -5,10 +5,10 @@ from pydantic import BaseModel
 from typing import Literal, Optional
 
 # 1. 로컬 모델을 사용
-# from chatbot_app import run_chatbot_with_ids
+# from src.slm_chatbot import run_chatbot_with_ids
 
 # 2. groq api를 사용
-from groq_app import run_chatbot_with_ids
+from src.groq_chatbot import run_chatbot_with_ids
 
 app = FastAPI()
 
