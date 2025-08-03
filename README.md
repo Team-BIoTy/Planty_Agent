@@ -55,7 +55,7 @@ snapshot_download(
 
 ```bash
 # 새로운 가상환경 생성
-conda create -n planty
+conda create -n planty python=3.11
 
 # 새로운 가상환경 실행
 conda activate planty
@@ -113,11 +113,7 @@ huggingface-cli login
 ## 🚀 서버 실행
 
 ### 1. FastAPI 서버 실행
-
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
+- `main.py`를 실행하여 FastAPI 서버 실행
 - `server_test.py`를 실행하여 서버 통신 테스트 가능
 
 </br>
@@ -132,12 +128,16 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Literal
 
-# 1. 로컬 모델 사용 시
-from chatbot_app import run_chatbot_with_ids
+# 1. 로컬 모델을 사용
+from src.slm_chatbot import run_chatbot_with_ids
+from src.slm_qa import run_plant_qa_chatbot
 
-# 2. Groq API 사용 시 (아래 주석 해제)
-# from groq_app import run_chatbot_with_ids
+# 2. groq api를 사용
+# from src.groq_chatbot import run_chatbot_with_ids
+# from src.groq_qa import run_plant_qa_chatbot
 ```
+- 로컬 모델이 groq_api 중 사용하지 않는 것을 주석처리
+
 
 ### 요청 형식
 
@@ -152,6 +152,14 @@ Content-Type: application/json
   "persona": "joy",
   "user_input": "식물이 괜찮은지 알려줘"
 }
+
+POST /plant_qa
+Content-Type: application/json
+
+{
+  "user_input": "여름에 기르기 좋은 식물을 추천해줘"
+}
+
 ```
 
 * `persona`는 다음 중 하나: `disgust`, `fear`, `joy`, `sadness`, `anger`
@@ -179,15 +187,23 @@ lm = ChatGroq(
 ```bash
 Planty_Agent/
 │
-├── main.py                  # FastAPI 서버 진입점
-├── chatbot_app.py           # 로컬 모델 기반 챗봇
-├── groq_app.py              # Groq API 기반 챗봇
-├── model_download.py        # 모델 다운로드 스크립트
-├── requirements.txt         # 의존성 리스트
-├── server_test.py           # 서버 통신 테스트
-├── db_config.json           # 데이터베이스 정의 파일
-├── .env                     # API Key 등 환경변수 파일 
-└── HyperCLOVAX-Local/       # 로컬 모델 저장 디렉토리
+├── 📁 data
+|       ├── chroma_db            # Chroma DB 
+|       ├── files                # Chroma DB에 저장되는 파일들
+|       └── leaf.db              # leaf.csv의 sqlite db
+├── 📁 HyperCLOVAX-Local/       # 로컬 모델 저장 디렉토리
+├── 📁 src
+|       ├── groq_chatbot.py      # Groq API 기반 대화 챗봇
+|       ├── groq_qa.py           # Groq API 기반 질의응답 챗봇
+|       ├── slm_chatbot.py       # 로컬모델 기반 대화 챗봇
+|       └── slm_qa.py            # 로컬모델 기반 질의응답 챗봇
+├── 📁 test_code
+|       └── server_test.py       # 서버 통신 테스트
+├── .env                        # API Key 등 환경변수 파일 
+├── db_config.json              # 데이터베이스 정의 파일
+├── download_model.py           # 모델 다운로드 스크립트
+├── requirements.txt            # 의존성 리스트
+└── main.py                     # FastAPI 서버 진입점
 ```
 
 </br>

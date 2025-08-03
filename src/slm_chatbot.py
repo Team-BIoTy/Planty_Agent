@@ -105,7 +105,7 @@ prompt_template = PromptTemplate.from_template(
 
 ############################ RAG 설정 ############################
 
-rag_ready = os.path.exists("./chroma_db") and any(os.scandir("./chroma_db"))
+rag_ready = os.path.exists("./data/chroma_db") and any(os.scandir("./data/chroma_db"))
 if not rag_ready:
     all_docs = []
     data_dir = "./data"
@@ -129,14 +129,14 @@ if not rag_ready:
 
     embeddings = CohereEmbeddings(model="embed-multilingual-v3.0")
     vectorstore = Chroma.from_documents(
-        texts, embedding=embeddings, persist_directory="./chroma_db", collection_name="kgarden"
+        texts, embedding=embeddings, persist_directory="./data/chroma_db", collection_name="kgarden"
     )
     vectorstore.persist()
 
 vectorstore = Chroma(
     collection_name="kgarden",
     embedding_function=CohereEmbeddings(model="embed-multilingual-v3.0"),
-    persist_directory="./chroma_db"
+    persist_directory="./data/chroma_db"
 )
 
 retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
