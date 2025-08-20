@@ -24,6 +24,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLoader, CSVLoader
 
 from duckduckgo_search import DDGS
+import requests
 
 # ======================== 환경 설정 ========================
 load_dotenv()
@@ -198,23 +199,38 @@ def initialize_rag():
         return None
 
 # ======================== 웹 검색 ========================
-def web_search(query: str, max_results: int = 3) -> str:
-    """DuckDuckGo를 이용한 웹 검색"""
+# def web_search(query: str, max_results: int = 3) -> str:
+#     """DuckDuckGo를 이용한 웹 검색"""
+#     try:
+#         ddgs = DDGS()
+#         search_query = query
+#         results = ddgs.text(search_query, max_results=max_results)
+        
+#         if not results:
+#             return None
+        
+#         formatted_results = []
+#         for i, result in enumerate(results, 1):
+#             title = result.get('title', 'No title')
+#             body = result.get('body', 'No content')
+#             formatted_results.append(f"{i}. {title}\n{body[:300]}...")
+        
+#         return "\n\n".join(formatted_results)
+#     except Exception as e:
+#         print(f"웹 검색 중 오류가 발생했습니다: {e}")
+#         return None
+
+def web_search(query: str, max_results: int = 5) -> str:
     try:
-        ddgs = DDGS()
-        search_query = f"{query} 식물 관리 키우기"
-        results = ddgs.text(search_query, max_results=max_results)
+        url = "https://www.googleapis.com/customsearch/v1"
+        params = {"q": query, "key": os.environ["GOOGLE_API_KEY"], "cx": os.environ["CX"], "num": max_results}
+        response = requests.get(url, params=params)
+        results = response.json().get("items", [])
         
-        if not results:
-            return None
-        
-        formatted_results = []
-        for i, result in enumerate(results, 1):
-            title = result.get('title', 'No title')
-            body = result.get('body', 'No content')
-            formatted_results.append(f"{i}. {title}\n{body[:300]}...")
-        
-        return "\n\n".join(formatted_results)
+        formatted = []
+        for i, item in enumerate(results, 1):
+            formatted.append(f"{i}. {item['title']}\n{item['snippet']}")
+        return "\n\n".join(formatted)
     except Exception as e:
         print(f"웹 검색 중 오류가 발생했습니다: {e}")
         return None
@@ -252,8 +268,9 @@ def database_search_node(state: PlantQAState) -> PlantQAState:
         try:
             result = db_handler.search_database(state["input"])
             state["database_result"] = result
-            # if result:
-            #     print("데이터베이스에서 결과를 찾았습니다.")
+            if result:
+                print("데이터베이스에서 결과를 찾았습니다.")
+                print(result)
         except Exception as e:
             print(f"데이터베이스 검색 오류: {e}")
             state["database_result"] = None
@@ -277,6 +294,7 @@ def rag_search_node(state: PlantQAState) -> PlantQAState:
             if answer and not any(keyword in answer.lower() for keyword in ["모르겠", "없습니다", "찾을 수 없", "정보가 없"]):
                 state["rag_result"] = answer
                 print("RAG 시스템에서 결과를 찾았습니다.")
+                print(answer)
             else:
                 state["rag_result"] = None
         except Exception as e:
@@ -289,16 +307,17 @@ def rag_search_node(state: PlantQAState) -> PlantQAState:
 
 def web_search_node(state: PlantQAState) -> PlantQAState:
     """웹 검색 노드"""
-    # 이미 다른 소스에서 결과를 찾았으면 웹 검색 건너뛰기
-    if state["database_result"] or state["rag_result"]:
-        state["web_result"] = None
-        return state
+    # # 이미 다른 소스에서 결과를 찾았으면 웹 검색 건너뛰기
+    # if state["database_result"] or state["rag_result"]:
+    #     state["web_result"] = None
+    #     return state
     
     try:
         result = web_search(state["input"])
         state["web_result"] = result
-        # if result:
-        #     print("웹 검색에서 결과를 찾았습니다.")
+        if result:
+            print("웹 검색에서 결과를 찾았습니다.")
+            print(result)
     except Exception as e:
         print(f"웹 검색 오류: {e}")
         state["web_result"] = None
@@ -306,31 +325,41 @@ def web_search_node(state: PlantQAState) -> PlantQAState:
     return state
 
 def response_generator_node(state: PlantQAState) -> PlantQAState:
-    """응답 생성 노드"""
-    # 가장 우선순위가 높은 정보 소스 선택
-    knowledge_source = ""
-    source_type = ""
+    """응답 생성 노드 - DB, RAG, 웹 검색 결과를 종합하여 답변 생성"""
     
-    if state["database_result"]:
-        knowledge_source = state["database_result"]
-        source_type = "데이터베이스"
-    elif state["rag_result"]:
-        knowledge_source = state["rag_result"]
-        source_type = "문서"
-    elif state["web_result"]:
-        knowledge_source = state["web_result"]
-        source_type = "웹 검색"
-    
-    if knowledge_source:
-        # 검색된 정보가 있는 경우
+    def is_valid_result(text: str) -> bool:
+        """검색 결과가 부실하거나 환각일 경우 무시하기 위한 간단한 검증"""
+        if not text:
+            return False
+        t = text.strip()
+        # 너무 짧거나 동일 문구 반복일 경우 제외
+        if len(t) < 20:
+            return False
+        if "잘 자라는 식물" in t and t.count("식물") > 3:
+            return False
+        return True
+
+    # 결과 수집
+    knowledge_sources = []
+    if is_valid_result(state.get("database_result")):
+        knowledge_sources.append(("데이터베이스", state["database_result"]))
+    if is_valid_result(state.get("rag_result")):
+        knowledge_sources.append(("문서", state["rag_result"]))
+    if is_valid_result(state.get("web_result")):
+        knowledge_sources.append(("웹 검색", state["web_result"]))
+
+    # 프롬프트 생성
+    if knowledge_sources:
+        references_text = "\n\n".join(
+            [f"Reference information ({src}):\n{content}" for src, content in knowledge_sources]
+        )
         prompt = f"""
         User asked a question about plants.
         Answer naturally and helpfully in Korean based on the following information.
 
         User question: {state['input']}
 
-        Reference information ({source_type}):
-        {knowledge_source}
+        {references_text}
 
         Answering guidelines:
         - Answer in natural Korean as if having a conversation
@@ -338,30 +367,31 @@ def response_generator_node(state: PlantQAState) -> PlantQAState:
         - Do not mention sources or documents, answer naturally
         - Clearly explain plant care or characteristics
         - Include additional tips or precautions if necessary
+        - If multiple sources differ, reconcile them logically
 
         Answer:
         """
     else:
-        # 검색된 정보가 없는 경우
         prompt = f"""
         User asked a question about plants.
         Answer naturally and helpfully in Korean based on general plant care knowledge.
 
         User question: {state['input']}
 
-        There is no specific information available from the database, documents, or web search.
+        There is no reliable information available from the database, documents, or web search.
         Please provide a helpful answer based on general plant care knowledge.
         If you cannot find specific information, explain politely and suggest alternatives.
 
         Answer:
         """
-    
+
+    # 답변 생성
     try:
         response = lm.invoke(prompt)
         state["final_response"] = response.content.strip()
     except Exception as e:
         state["final_response"] = f"죄송합니다. 답변 생성 중 오류가 발생했습니다: {e}"
-    
+
     return state
 
 # ======================== 그래프 구성 ========================
@@ -399,7 +429,7 @@ def run_plant_qa_chatbot(user_input: str) -> dict:
     # 입력 전처리
     cleaned_input = re.sub(r"[^\w\sㄱ-힣?!.,]", "", user_input.strip())
     
-    # print(f"질문: {cleaned_input}")
+    print(f"질문: {cleaned_input}")
     
     # 멀티에이전트 실행
     try:
@@ -419,21 +449,35 @@ def run_plant_qa_chatbot(user_input: str) -> dict:
 if __name__ == "__main__":
     import time
 
-    num_runs = 10
-    times = []
-    
-    for i in range(num_runs):    
-        print("=" * 80)
+    # num_runs = 10
+    # times = []
+
+    questions = [
+        "겨울에 기르기 좋은 식물 3가지만 추천해줘",
+        # "실내식물을 기르기 위해 필요한 조건은 뭐야?",
+        # "가울테리아에 대해서 설명해줘",
+        # "물을 자주 주지 않아도 잘 자라는 식물은 어떤 게 있을까?",
+        # "만약 식물에 물을 너무 많이 줬으면 어떻게 해야 할까?",
+        # "산세베리아를 키울 때 주의할 점을 알려줘",
+        # "무궁화에 대해 설명해봐",
+        # "분갈이를 위해서 사야하는 화분의 크기는 몇 인치가 적당할까?",
+        # "산세베리아 분갈이를 위해서 사야하는 화분의 크기는 몇 인치가 적당할까?"
+    ]
+
+    for question in questions:    
+        print("=" * 40)
         start_time = time.time()
         
-        result = run_plant_qa_chatbot("여름에 기르기 좋은 실내 식물은 뭐가 있을까?")
+        result = run_plant_qa_chatbot(question)
         
         elapsed = time.time() - start_time
-        times.append(elapsed)
+        # times.append(elapsed)
 
-        print(f"[{i+1}/{num_runs}] 소요 시간: {elapsed:.2f}초")
+        print("=" * 40)
+        print(f"질문: {question}")
+        print(f"소요 시간: {elapsed:.2f}초")
         print("응답:", result.get("final_response", "응답이 없습니다."))
         print("="*40)
 
-    avg_time = sum(times) / num_runs
-    print(f"\n=== 평균 소요 시간: {avg_time:.2f}초 ===")
+    # avg_time = sum(times) / num_runs
+    # print(f"\n=== 평균 소요 시간: {avg_time:.2f}초 ===")
