@@ -420,15 +420,28 @@ if __name__ == "__main__":
     # 속도 테스트
     start_time = time.time()
 
-    result = run_chatbot_with_direct_data(
-        nickname="플로라",
-        env_info_dict=env_info,
-        cur_info_dict=cur_info,
-        chat_log=chat_log,
-        persona="disgust",
-        user_input="오늘 기분이 어때?"
-    )
+    num_runs = 10
+    times = []
 
-    print("=== 챗봇 응답 ===")
-    print(result.get("final_response", "응답이 없습니다."))
-    print(f"소요 시간: {time.time() - start_time:.2f}초")
+    for i in range(num_runs):
+        start_time = time.time()
+
+        result = run_chatbot_with_direct_data(
+            nickname="플로라",
+            env_info_dict=env_info,
+            cur_info_dict=cur_info,
+            chat_log=chat_log,
+            persona="joy",
+            user_input="여름에 기르기 좋은 실내 식물은 뭐가 있을까?"
+        )
+
+        elapsed = time.time() - start_time
+        times.append(elapsed)
+
+        print(f"[{i+1}/{num_runs}] 소요 시간: {elapsed:.2f}초")
+        print("응답:", result.get("final_response", "응답이 없습니다."))
+        print("="*40)
+
+    avg_time = sum(times) / num_runs
+    print(f"\n=== 평균 소요 시간: {avg_time:.2f}초 ===")
+

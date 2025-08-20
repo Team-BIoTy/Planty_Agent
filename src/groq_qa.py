@@ -418,21 +418,22 @@ def run_plant_qa_chatbot(user_input: str) -> dict:
 # ======================== 실행 예시 ========================
 if __name__ == "__main__":
     import time
+
+    num_runs = 10
+    times = []
     
-    # 테스트 질문들
-    test_questions = [
-        "여름에 기르기 좋은 실내 식물은 뭐가 있을까?",
-        "몬스테라 키우는 방법을 알려줘",
-        # "물을 너무 많이 줘서 뿌리가 썩었는데 어떻게 해야할까?",
-        # "햇빛이 잘 안 드는 곳에서도 잘 자라는 식물 추천해줘"
-    ]
-    
-    for question in test_questions:
+    for i in range(num_runs):    
         print("=" * 80)
         start_time = time.time()
         
-        result = run_plant_qa_chatbot(question)
+        result = run_plant_qa_chatbot("여름에 기르기 좋은 실내 식물은 뭐가 있을까?")
         
-        print(f"답변: {result.get('final_response', '응답이 없습니다.')}")
-        print(f"소요 시간: {time.time() - start_time:.2f}초")
-        print()
+        elapsed = time.time() - start_time
+        times.append(elapsed)
+
+        print(f"[{i+1}/{num_runs}] 소요 시간: {elapsed:.2f}초")
+        print("응답:", result.get("final_response", "응답이 없습니다."))
+        print("="*40)
+
+    avg_time = sum(times) / num_runs
+    print(f"\n=== 평균 소요 시간: {avg_time:.2f}초 ===")
