@@ -23,7 +23,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLoader, CSVLoader
 
-from duckduckgo_search import DDGS
 import requests
 
 # ======================== 환경 설정 ========================
@@ -199,27 +198,6 @@ def initialize_rag():
         return None
 
 # ======================== 웹 검색 ========================
-# def web_search(query: str, max_results: int = 3) -> str:
-#     """DuckDuckGo를 이용한 웹 검색"""
-#     try:
-#         ddgs = DDGS()
-#         search_query = query
-#         results = ddgs.text(search_query, max_results=max_results)
-        
-#         if not results:
-#             return None
-        
-#         formatted_results = []
-#         for i, result in enumerate(results, 1):
-#             title = result.get('title', 'No title')
-#             body = result.get('body', 'No content')
-#             formatted_results.append(f"{i}. {title}\n{body[:300]}...")
-        
-#         return "\n\n".join(formatted_results)
-#     except Exception as e:
-#         print(f"웹 검색 중 오류가 발생했습니다: {e}")
-#         return None
-
 def web_search(query: str, max_results: int = 5) -> str:
     try:
         url = "https://www.googleapis.com/customsearch/v1"
@@ -268,9 +246,9 @@ def database_search_node(state: PlantQAState) -> PlantQAState:
         try:
             result = db_handler.search_database(state["input"])
             state["database_result"] = result
-            if result:
-                print("데이터베이스에서 결과를 찾았습니다.")
-                print(result)
+            # if result:
+            #     print("데이터베이스에서 결과를 찾았습니다.")
+                # print(result)
         except Exception as e:
             print(f"데이터베이스 검색 오류: {e}")
             state["database_result"] = None
@@ -315,9 +293,9 @@ def web_search_node(state: PlantQAState) -> PlantQAState:
     try:
         result = web_search(state["input"])
         state["web_result"] = result
-        if result:
-            print("웹 검색에서 결과를 찾았습니다.")
-            print(result)
+        # if result:
+        #     print("웹 검색에서 결과를 찾았습니다.")
+        #     print(result)
     except Exception as e:
         print(f"웹 검색 오류: {e}")
         state["web_result"] = None

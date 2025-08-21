@@ -12,5 +12,4 @@ transformers==4.51.3
 peft==0.15.2
 pymysql==1.1.1
 torch==2.6.0
-duckduckgo_search==8.1.1
 chromadb==1.0.15

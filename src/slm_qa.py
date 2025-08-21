@@ -26,7 +26,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLoader, CSVLoader
 
-from duckduckgo_search import DDGS
 import requests
 
 # ======================== 환경 설정 ========================
@@ -213,27 +212,6 @@ def initialize_rag():
         return None
 
 # ======================== 웹 검색 ========================
-# def web_search(query: str, max_results: int = 3) -> str:
-#     """DuckDuckGo를 이용한 웹 검색"""
-#     try:
-#         ddgs = DDGS()
-#         search_query = f"{query} 식물 관리 키우기"
-#         results = ddgs.text(search_query, max_results=max_results)
-        
-#         if not results:
-#             return None
-        
-#         formatted_results = []
-#         for i, result in enumerate(results, 1):
-#             title = result.get('title', 'No title')
-#             body = result.get('body', 'No content')
-#             formatted_results.append(f"{i}. {title}\n{body[:300]}...")
-        
-#         return "\n\n".join(formatted_results)
-#     except Exception as e:
-#         print(f"웹 검색 중 오류가 발생했습니다: {e}")
-#         return None
-
 def web_search(query: str, max_results: int = 5) -> str:
     try:
         url = "https://www.googleapis.com/customsearch/v1"
@@ -306,7 +284,7 @@ def rag_search_node(state: PlantQAState) -> PlantQAState:
             # 답변이 유의미한지 확인
             if answer and not any(keyword in answer.lower() for keyword in ["모르겠", "없습니다", "찾을 수 없", "정보가 없"]):
                 state["rag_result"] = answer
-                print("RAG 시스템에서 결과를 찾았습니다.")
+                # print("RAG 시스템에서 결과를 찾았습니다.")
             else:
                 state["rag_result"] = None
         except Exception as e:

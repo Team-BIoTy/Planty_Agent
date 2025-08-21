@@ -432,7 +432,7 @@ if __name__ == "__main__":
             cur_info_dict=cur_info,
             chat_log=chat_log,
             persona="joy",
-            user_input="여름에 기르기 좋은 실내 식물은 뭐가 있을까?"
+            user_input="오늘 기분이 어때?"
         )
 
         elapsed = time.time() - start_time
