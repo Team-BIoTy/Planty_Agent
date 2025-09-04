@@ -36,7 +36,7 @@ class DatabaseQueryHandler:
     def __init__(self, db_path: str, groq_api_key: str):
         self.llm = ChatGroq(
             api_key=groq_api_key,
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             temperature=0,
         )
         

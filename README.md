@@ -16,6 +16,7 @@
 - **전체 개발 기간**: 
 - **Agent 설계**: 2025.05.01 - 2025.05.07
 - **기능 구현**: 2025.05.14 - 2025.05.31
+- **기능 업데이트**: 2025.07.01 - 2025.08.22
 - **기본 제공 모델**: [yerim00/HyperCLOVAX-SEED-Text-Instruct-1.5B-planty-ia3](yerim00/HyperCLOVAX-SEED-Text-Instruct-1.5B-planty-ia3)
 
 
@@ -79,10 +80,13 @@ pip install -r requirements.txt
 # .env
 COHERE_API_KEY = "your_cohere_api"
 GROQ_API_KEY = "your_groq_api"
+CX = "your_cx"
+GOOGLE_API_KEY = "your_google_api"
 ```
 
 * [Cohere API Key 발급](https://dashboard.cohere.com/welcome/login?redirect_uri=%2Fapi-keys)
 * [Groq API Key 발급](https://console.groq.com/keys)
+* [Google API Key 발급](https://developers.google.com/custom-search/v1/introduction?hl=ko)
 
 ### 2. HuggingFace 로그인 (로컬 모델 사용 시 필수)
 
@@ -119,26 +123,6 @@ huggingface-cli login
 </br>
 
 ## 🤖 챗봇 설정
-
-### `main.py` 사용 예시
-
-```python
-# main.py
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Literal
-
-# 1. 로컬 모델을 사용
-from src.slm_chatbot import run_chatbot_with_ids
-from src.slm_qa import run_plant_qa_chatbot
-
-# 2. groq api를 사용
-# from src.groq_chatbot import run_chatbot_with_ids
-# from src.groq_qa import run_plant_qa_chatbot
-```
-- 로컬 모델이 groq_api 중 사용하지 않는 것을 주석처리
-
-
 ### 요청 형식
 
 ```json
@@ -146,6 +130,7 @@ POST /chat
 Content-Type: application/json
 
 {
+  "type": "slm",
   "chat_room_id": 1,
   "sensor_log_id": 10,
   "plant_env_standards_id": 5,
@@ -157,6 +142,7 @@ POST /plant_qa
 Content-Type: application/json
 
 {
+  "type": "slm",
   "user_input": "여름에 기르기 좋은 식물을 추천해줘"
 }
 
@@ -193,17 +179,20 @@ Planty_Agent/
 |       └── leaf.db              # leaf.csv의 sqlite db
 ├── 📁 HyperCLOVAX-Local/       # 로컬 모델 저장 디렉토리
 ├── 📁 src
+|       ├── 📁 base
+|       |       ├── chatbot.py   # 대화 챗봇 코드
+|       |       └── qa.py        # 질의응답 챗봇 코드
 |       ├── groq_chatbot.py      # Groq API 기반 대화 챗봇
 |       ├── groq_qa.py           # Groq API 기반 질의응답 챗봇
 |       ├── slm_chatbot.py       # 로컬모델 기반 대화 챗봇
 |       └── slm_qa.py            # 로컬모델 기반 질의응답 챗봇
 ├── 📁 test_code
 |       └── server_test.py       # 서버 통신 테스트
-├── .env                        # API Key 등 환경변수 파일 
-├── db_config.json              # 데이터베이스 정의 파일
-├── download_model.py           # 모델 다운로드 스크립트
-├── requirements.txt            # 의존성 리스트
-└── main.py                     # FastAPI 서버 진입점
+├── .env                         # API Key 등 환경변수 파일 
+├── db_config.json               # 데이터베이스 정의 파일
+├── download_model.py            # 모델 다운로드 스크립트
+├── requirements.txt             # 의존성 리스트
+└── main.py                      # FastAPI 서버 진입점
 ```
 
 </br>

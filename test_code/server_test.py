@@ -4,6 +4,7 @@ import requests
 def test_chat_api():
     url = "http://localhost:8000/chat"
     payload = {
+        "type": "slm",
         "chat_room_id": 1,
         "sensor_log_id": 1,
         "plant_env_standards_id": 1,
@@ -20,6 +21,7 @@ def test_chat_api():
     
     url = "http://localhost:8000/plant_qa"
     payload_qa = {
+        "type": "slm",
         "user_input": "몬스테라 키우는 방법을 알려줘"
     }
 
