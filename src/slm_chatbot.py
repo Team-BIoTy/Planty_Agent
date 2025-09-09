@@ -32,7 +32,8 @@ hf_pipeline = pipeline(
     eos_token_id=tokenizer.eos_token_id,
 )
 
-lm = HuggingFacePipeline(pipeline=hf_pipeline, model_kwargs={"temperature": 0.7})
+lm = HuggingFacePipeline(pipeline=hf_pipeline, model_kwargs={"temperature": 0.7,
+                                                             "stopping_criteria": [[tokenizer.eos_token_id]]})
 
 ############################ 실행 함수 ############################
 # 데이터베이스에서 정보를 가져와 챗봇을 실행하는 함수
@@ -58,7 +59,7 @@ def run_slm_chatbot_with_ids(
     response = bot.run(**params)
     return response
 
-def run_chatbot_with_direct_data(
+def run_slm_chatbot_with_direct_data(
     nickname: str,
     env_info_dict: dict,
     cur_info_dict: dict,

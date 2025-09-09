@@ -236,9 +236,15 @@ class PersonaChatbot:
         def extract_final_response(out):
             # out이 객체면 content만, 아니면 str형 변환 후 strip
             if hasattr(out, "content"):
-                return {"final_response": out.content.strip()}
+                final_response = out.content.strip()
             else:
-                return {"final_response": str(out).strip()}
+                final_response = str(out).strip()
+            
+            if "assistant" in final_response.lower():
+                final_response = final_response.split("assistant")[0].strip()
+
+            return {"final_response": final_response}
+                    
         return (
             RunnableMap({
                 "input": lambda s: s["input"],
