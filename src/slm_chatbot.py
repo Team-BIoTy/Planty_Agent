@@ -45,7 +45,7 @@ def run_slm_chatbot_with_ids(
     user_input: str = "",
     plant_info: dict | None = None
 ) -> dict:
-    bot = PersonaChatbot(lm)
+    bot = PersonaChatbot(lm, type="SLM")
 
     params = {
         "chat_room_id": chat_room_id,
@@ -67,7 +67,7 @@ def run_slm_chatbot_with_direct_data(
     persona: str = "joy",
     user_input: str = ""
 ) -> dict:
-    bot = PersonaChatbot(lm)
+    bot = PersonaChatbot(lm, type="SLM")
     
     params = {
         "nickname": nickname,

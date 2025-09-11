@@ -4,6 +4,7 @@ import os
 import streamlit as st
 import time
 import datetime
+import csv
 
 from src.groq_qa import run_llm_plant_qa_chatbot
 from src.groq_chatbot import run_llm_chatbot_with_direct_data
@@ -119,17 +120,48 @@ def sidebar():
             st.session_state.messages = []
             st.rerun()
 
+
+        # ========================= 설문 =========================
+        st.divider()
+        st.subheader("📝 설문")
+        st.link_button("설문 참여하기", url="https://forms.gle/57TiK928X3CnsR5W6")
+
 # ======================== 챗봇 ========================
 
-def run_persona(type, user_input: str) -> str:
-    env_info = {
+def load_env_info_from_csv(plant_name, csv_file="./data/plant_env_standards_filtered.csv"):
+    """
+    plant_env_standards_filtered.csv에서 plant_name(=common_name)에 해당하는 환경 정보 로드
+    """
+    with open(csv_file, newline='', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["common_name"] == plant_name:
+                return {
+                    "max_humidity": float(row.get("max_humidity", 80)),
+                    "max_light": float(row.get("max_light", 15000)),
+                    "max_temperature": float(row.get("max_temperature", 30)),
+                    "min_humidity": float(row.get("min_humidity", 40)),
+                    "min_light": float(row.get("min_light", 5000)),
+                    "min_temperature": float(row.get("min_temperature", 15)),
+                }
+
+    # 찾지 못하면 기본값 반환
+    return {
         "max_humidity": 80,
         "max_light": 15000,
         "max_temperature": 30,
         "min_humidity": 40,
         "min_light": 5000,
-        "min_temperature": 15
+        "min_temperature": 15,
     }
+
+def run_persona(type, user_input: str) -> str:
+    """
+    페르소나 챗봇 실행
+    """
+
+    # 환경 정보 로드
+    env_info = load_env_info_from_csv(st.session_state.plant_type)
 
     # 기본값 = "적절"
     env_type = st.session_state.plant_env

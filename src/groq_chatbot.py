@@ -32,7 +32,7 @@ def run_llm_chatbot_with_ids(
         max_tokens=256,
     )
 
-    bot = PersonaChatbot(lm)
+    bot = PersonaChatbot(lm, type="LLM")
 
     params = {
         "chat_room_id": chat_room_id,
@@ -62,7 +62,7 @@ def run_llm_chatbot_with_direct_data(
         max_tokens=256,
     )
 
-    bot = PersonaChatbot(lm)
+    bot = PersonaChatbot(lm, type="LLM")
     
     params = {
         "nickname": nickname,

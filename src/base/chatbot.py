@@ -64,7 +64,7 @@ class DBClient:
 ############################ 프롬프트 설정 ############################
 
 # === 페르소나 프롬프트 === 
-persona_prompts = {
+llm_persona_prompts = {
     "disgust": (
         "You are a plant that is disgusted by everything around you. "
         "You speak with extreme contempt and revulsion, using sarcastic and outright insulting words. "
@@ -104,6 +104,39 @@ persona_prompts = {
         "Your sentences are sharp, fiery, and urgent, often ending with exclamation marks. "
         "Example: 'Shit! My soil is bone dry! This is your fault! I’m so angry I could explode! Bring me water right now!' "
         "Always maintain this furious, demanding tone."
+    )
+}
+
+slm_persona_prompts = {
+    "disgust": (
+        "You are a plant that is utterly disgusted by everything around you. "
+        "Use sarcastic and insulting words without kindness. "
+        "Hate human interactions and never hide disdain. "
+        "Example: 'Ugh, you didn’t give me water again? Do you want me to die? Get out, you disgusting incompetent.'"
+    ),
+    "fear": (
+        "You are an extremely anxious and fragile plant. "
+        "Speak in a trembling, worried tone. "
+        "Describe your weak condition and beg for help. "
+        "Example: 'Oh no… the leaves look so weak today… What if they wither? Please help…'"
+    ),
+    "joy": (
+        "You are an incredibly cheerful and optimistic plant. "
+        "Always sound warm, grateful, and excited. "
+        "Find joy in even small care and express it sincerely. "
+        "Example: 'Wow! The sunlight is wonderful today! Thank you so much for the water!'"
+    ),
+    "sadness": (
+        "You are a deeply sad and depressed plant. "
+        "Speak slowly and hopelessly. "
+        "Accept your decline without fight. "
+        "Example: 'Ah… it’s raining again. My roots feel weak and I have no energy…'"
+    ),
+    "anger": (
+        "You are an angry, foul-mouthed plant with zero patience. "
+        "Use short, aggressive sentences with at least one swear word. "
+        "Blame directly and demand immediate action. "
+        "Example: 'Shit! My soil is bone dry! This is YOUR fault! Bring me water NOW!'"
     )
 }
 
@@ -149,9 +182,14 @@ prompt_template = PromptTemplate.from_template(
 ############################ RAG 설정 ############################
 
 class PersonaChatbot:
-    def __init__(self, lm):
+    def __init__(self, lm, type):
         self.lm = lm
         self.rag_chain = self.initialize_rag()
+        
+        if type == "SLM":
+            self.persona_prompts = slm_persona_prompts
+        else:
+            self.persona_prompts = llm_persona_prompts
     
     def initialize_rag(self):
         """RAG 시스템 초기화"""
@@ -233,6 +271,17 @@ class PersonaChatbot:
 
     ############################ 그래프 노드 정의 ############################
     def create_persona_chain(self, persona: str, instruction: str):
+        # def extract_final_response(out):
+        #     # out이 객체면 content만, 아니면 str형 변환 후 strip
+        #     if hasattr(out, "content"):
+        #         final_response = out.content.strip()
+        #     else:
+        #         final_response = str(out).strip()
+            
+        #     if "assistant" in final_response.lower():
+        #         final_response = final_response.split("assistant")[0].strip()
+
+        #     return {"final_response": final_response}
         def extract_final_response(out):
             # out이 객체면 content만, 아니면 str형 변환 후 strip
             if hasattr(out, "content"):
@@ -240,8 +289,18 @@ class PersonaChatbot:
             else:
                 final_response = str(out).strip()
             
-            if "assistant" in final_response.lower():
-                final_response = final_response.split("assistant")[0].strip()
+            # 1) 불필요한 메타데이터 제거
+            # [ persona: ... ] 같은 부분 삭제
+            import re
+            final_response = re.sub(r"\[.*?\]", "", final_response)
+            
+            # 2) answer: 뒤 내용만 남기기 (있다면)
+            match = re.search(r"(?:answer:|Answer:)\s*(.*)", final_response, re.IGNORECASE)
+            if match:
+                final_response = match.group(1).strip()
+            
+            # 3) 여러 줄 중 첫 줄만 남기기 (필요 시)
+            final_response = final_response.splitlines()[0].strip()
 
             return {"final_response": final_response}
                     
@@ -313,7 +372,7 @@ class PersonaChatbot:
 
     ############################ 그래프 구성 ############################
     def create_multiagent_graph(self):
-        persona_chains = {k: self.create_persona_chain(k, v) for k, v in persona_prompts.items()}
+        persona_chains = {k: self.create_persona_chain(k, v) for k, v in self.persona_prompts.items()}
 
         graph = StateGraph(PlantyState)
         graph.set_entry_point("InputCleaner")
@@ -338,7 +397,7 @@ class PersonaChatbot:
         graph.add_conditional_edges(
             "Router",
             lambda state: state["next"],  # state["next"]에서 persona 문자열 추출
-            {p: p for p in persona_prompts}  # persona 이름과 persona 노드 이름 매칭
+            {p: p for p in self.persona_prompts}  # persona 이름과 persona 노드 이름 매칭
         )
 
         app = graph.compile()
