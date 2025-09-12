@@ -13,7 +13,6 @@ from src.base.chatbot import PersonaChatbot
 ############################ 환경 설정 ############################
 load_dotenv()
 os.environ["COHERE_API_KEY"] = os.getenv("COHERE_API_KEY")
-os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 
 ############################ 실행 함수 ############################
 def run_llm_chatbot_with_ids(
@@ -22,7 +21,8 @@ def run_llm_chatbot_with_ids(
     plant_env_standards_id: int,
     persona: str = "joy",
     user_input: str = "",
-    plant_info: dict | None = None
+    plant_info: dict | None = None,
+    api_key: str | None = None
 ) -> dict:
     
     # 모델 로드
@@ -30,6 +30,7 @@ def run_llm_chatbot_with_ids(
         model="gemma2-9b-it", # Groq 모델 이름
         temperature=0.7,
         max_tokens=256,
+        api_key=api_key
     )
 
     bot = PersonaChatbot(lm, type="LLM")
@@ -40,7 +41,7 @@ def run_llm_chatbot_with_ids(
         "plant_env_standards_id": plant_env_standards_id,
         "persona": persona,
         "user_input": user_input,
-        "plant_info": plant_info
+        "plant_info": plant_info,
     }
 
     response = bot.run(**params)

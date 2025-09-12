@@ -11,15 +11,15 @@ from src.base.qa import PlantQAChatbot
 # ======================== 환경 설정 ========================
 load_dotenv()
 os.environ["COHERE_API_KEY"] = os.getenv("COHERE_API_KEY")
-os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 
 # ======================== 답변 함수 ========================
-def run_llm_plant_qa_chatbot(user_input: str):
+def run_llm_plant_qa_chatbot(user_input: str, api_key: str | None = None):
     # 모델 로딩
     lm = ChatGroq(
         model="gemma2-9b-it",
         temperature=0.7,
         max_tokens=512,
+        api_key=api_key
     )
 
     bot = PlantQAChatbot(lm)

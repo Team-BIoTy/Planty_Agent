@@ -4,12 +4,12 @@ import requests
 def test_chat_api():
     url = "http://localhost:8000/chat"
     payload = {
-        "type": "slm",
+        "type": "llm",
         "chat_room_id": 1,
         "sensor_log_id": 1,
         "plant_env_standards_id": 1,
         "persona": "joy",
-        "user_input": "오늘 식물 상태가 어떤가요?"
+        "user_input": "오늘 식물 상태가 어떤가요?",
     }
 
     response = requests.post(url, json=payload)
@@ -18,10 +18,10 @@ def test_chat_api():
         print("챗봇 응답:", data.get("final_response"))
     else:
         print(f"오류 발생! 상태 코드: {response.status_code}, 메시지: {response.text}")
-    
+
     url = "http://localhost:8000/plant_qa"
     payload_qa = {
-        "type": "slm",
+        "type": "llm",
         "user_input": "몬스테라 키우는 방법을 알려줘"
     }
 

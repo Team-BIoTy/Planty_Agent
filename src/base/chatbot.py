@@ -34,7 +34,7 @@ class PlantyState(TypedDict):
 ############################ DB 유틸 ############################
 
 class DBClient:
-    def __init__(self, db_name="Planty", config_path="db_config.json"):
+    def __init__(self, db_name="railway", config_path="db_config.json"):
         with open(config_path, "r") as f:
             config = json.load(f)
         self.config = {
