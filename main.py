@@ -7,11 +7,11 @@ from dotenv import load_dotenv
 import os
 
 # 1. 로컬 모델을 사용
-from src.slm_chatbot import run_slm_chatbot_with_ids
+from src.slm_chatbot import run_slm_chatbot_with_ids, run_slm_chatbot_with_direct_data
 from src.slm_qa import run_slm_plant_qa_chatbot
 
 # 2. groq api를 사용
-from src.groq_chatbot import run_llm_chatbot_with_ids
+from src.groq_chatbot import run_llm_chatbot_with_ids, run_llm_chatbot_with_direct_data
 from src.groq_qa import run_llm_plant_qa_chatbot
 
 load_dotenv()
@@ -37,6 +37,19 @@ class PlantQARequest(BaseModel):
     api_key: Optional[str] = None
 
 class PlantQAResponse(BaseModel):
+    final_response: str
+
+class ChatDirectRequest(BaseModel):
+    type: Literal["slm", "llm"]
+    nickname: str
+    env_info_dict: dict
+    cur_info_dict: dict
+    chat_log: str
+    persona: Literal["disgust", "fear", "joy", "sadness", "anger"]
+    user_input: str
+    api_key: Optional[str] = None
+
+class ChatDirectResponse(BaseModel):
     final_response: str
 
 @app.post("/chat", response_model=ChatResponse)
@@ -82,6 +95,38 @@ def plant_qa_endpoint(request: PlantQARequest):
 
         final_resp = output.get("final_response", "응답이 없습니다.")
         return PlantQAResponse(type=request.type, final_response=final_resp)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat_direct", response_model=ChatDirectResponse)
+def chat_direct_endpoint(request: ChatDirectRequest):
+    try:
+        if request.type == "slm":
+            output = run_slm_chatbot_with_direct_data(
+                nickname=request.nickname,
+                env_info_dict=request.env_info_dict,
+                cur_info_dict=request.cur_info_dict,
+                chat_log=request.chat_log,
+                persona=request.persona,
+                user_input=request.user_input
+            )
+
+        elif request.type == "llm":
+            api_key = request.api_key or os.environ.get("GROQ_API_KEY")
+            output = run_llm_chatbot_with_direct_data(
+                nickname=request.nickname,
+                env_info_dict=request.env_info_dict,
+                cur_info_dict=request.cur_info_dict,
+                chat_log=request.chat_log,
+                persona=request.persona,
+                user_input=request.user_input,
+                api_key=api_key
+            )
+        else:
+            raise HTTPException(status_code=400, detail="Invalid type. Must be 'slm' or 'llm'.")
+        
+        final_resp = output.get("final_response", "응답이 없습니다.")
+        return ChatResponse(type=type, final_response=final_resp)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

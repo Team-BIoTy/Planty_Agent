@@ -53,7 +53,8 @@ def run_llm_chatbot_with_direct_data(
     cur_info_dict: dict,
     chat_log: str,
     persona: str = "joy",
-    user_input: str = ""
+    user_input: str = "",
+    api_key: str | None = None
 ) -> dict:
 
     # 모델 로드
@@ -61,6 +62,7 @@ def run_llm_chatbot_with_direct_data(
         model="gemma2-9b-it", # Groq 모델 이름
         temperature=0.7,
         max_tokens=256,
+        api_key=api_key
     )
 
     bot = PersonaChatbot(lm, type="LLM")
