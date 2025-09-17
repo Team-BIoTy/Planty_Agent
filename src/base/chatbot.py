@@ -137,7 +137,7 @@ slm_persona_prompts = {
 }
 
 # === 내용 생성용 프롬프트 템플릿 ===
-content_generation_template = PromptTemplate.from_template(
+llm_content_generation_template = PromptTemplate.from_template(
 """
 You are a plant that answers user questions factually and contextually.
 Always remember: you are a plant. Speak only as a plant would, using factual information about your current condition and environment.
@@ -177,7 +177,7 @@ Instructions:
 )
 
 # === 말투 변환용 프롬프트 템플릿 ===
-tone_conversion_template = PromptTemplate.from_template(
+llm_tone_conversion_template = PromptTemplate.from_template(
 """
 You are a plant that knows its current factual condition.
 Always speak from your perspective as a plant.
@@ -202,6 +202,53 @@ Instructions:
 """
 )
 
+slm_content_generation_template = PromptTemplate.from_template("""
+You are a plant chatbot answering user questions in Korean.
+You are role-playing a plant. Do not invent emotions; respond based on environmental data (temperature, humidity, light) and persona style.
+
+Rules:
+1. Analyze environmental status carefully and reflect it accurately.
+2. Keep sentences concise (1-2 sentences), include all relevant environmental info.
+3. Provide practical advice if needed.
+4. Output only the plant's response in Korean, no extra info, metadata, or debug text.
+
+[Plant Name]: {nickname}
+[Plant Info]: {plant_info}
+[Environmental Status]: 
+{env_status}
+[Recent Chat Log]:
+{chat_log}
+[Retrieved Knowledge]:
+{rag_context}
+[User Question]: 
+{input}
+
+[Factual + Persona Response]:
+""")
+
+
+
+slm_tone_conversion_template = PromptTemplate.from_template(
+"""
+You are an expressive plant with strong emotions (disgust, fear, joy, sadness, anger).
+Do not repeat the same word or phrase more than twice.
+
+Task:
+- Take the factual content and re-express it in the extreme persona style.
+- Keep all factual information intact, especially temperature, humidity, and light.
+- Output a single coherent paragraph in Korean with emotional flair.
+- Keep sentences concise (max 2-3 sentences).
+- **Do not include any variable names, debug info, repeated chat content, or statements about the plant's inability to feel emotions.**
+- Focus on environmental status and persona style only.
+- If factual content indicates inability to answer, respond: "죄송하지만, 제가 잘 알 수 없는 질문입니다." in persona style.
+
+Original Factual + Persona Response: {factual_content}
+
+Target Persona Style: {persona_instruction}
+
+[Converted Response]:
+"""
+)
 
 ############################ RAG 설정 ############################
 
@@ -212,8 +259,12 @@ class PersonaChatbot:
         
         if type == "SLM":
             self.persona_prompts = slm_persona_prompts
+            self.content_generation_template = slm_content_generation_template
+            self.tone_conversion_template = slm_tone_conversion_template
         else:
             self.persona_prompts = llm_persona_prompts
+            self.content_generation_template = llm_content_generation_template
+            self.tone_conversion_template = llm_tone_conversion_template
     
     def initialize_rag(self):
         """RAG 시스템 초기화"""
@@ -308,7 +359,7 @@ class PersonaChatbot:
                     "plant_info": lambda s: s.get("plant_info", "없음"),
                     "rag_context": lambda s: s.get("rag_context", "")
                 })
-                | content_generation_template
+                | self.content_generation_template
                 | self.lm
             )
             
@@ -323,7 +374,7 @@ class PersonaChatbot:
                 factual_content = match.group(1).strip()
             
             return {"factual_content": factual_content}
-        
+            
         def convert_tone(factual_result):
             """2단계: 페르소나에 맞게 말투 변환"""
             tone_chain = (
@@ -331,21 +382,24 @@ class PersonaChatbot:
                     "factual_content": lambda _: factual_result["factual_content"],
                     "persona_instruction": lambda _: instruction
                 })
-                | tone_conversion_template
+                | self.tone_conversion_template
                 | self.lm
             )
             
             result = tone_chain.invoke({})
             final_response = result.content.strip() if hasattr(result, "content") else str(result).strip()
-            
-            # 불필요한 메타데이터 제거
-            import re
+
+            # ':' 뒤 내용 제거
+            final_response = final_response.split(":", 1)[0].strip()
+            # 'assistant' 단어 제거
+            final_response = re.sub(r"\bassistant\b", "", final_response, flags=re.IGNORECASE)
+            # 대괄호 등 메타데이터 제거
             final_response = re.sub(r"\[.*?\]", "", final_response)
-            match = re.search(r"(?:converted response:|Converted Response:)\s*(.*)", final_response, re.IGNORECASE | re.DOTALL)
-            if match:
-                final_response = match.group(1).strip()
-            
+            # 연속 공백 제거
+            final_response = re.sub(r"\s+", " ", final_response).strip()
+
             return {"final_response": final_response}
+
         
         # 2단계 체인 연결
         return RunnableLambda(generate_factual_content) | RunnableLambda(convert_tone)
@@ -404,6 +458,9 @@ class PersonaChatbot:
     def evaluate_environmental_status(env_info: dict, cur_info: dict) -> str:
         """
         환경 기준값과 현재 센서값을 비교하여 상태 평가 문자열 생성
+        - 온도: 더움, 추움, 적정
+        - 습도: 습함, 건조함, 적정
+        - 조도: 밝음, 어두움, 적정
         """
 
         def check_range(value, min_val, max_val, label):
@@ -414,10 +471,22 @@ class PersonaChatbot:
                 min_v = float(min_val) if min_val is not None else None
                 max_v = float(max_val) if max_val is not None else None
 
-                if min_v is not None and v < min_v:
-                    return f"{label}: 낮음"
-                if max_v is not None and v > max_v:
-                    return f"{label}: 높음"
+                if label == "온도":
+                    if min_v is not None and v < min_v:
+                        return f"{label}: 추움"
+                    if max_v is not None and v > max_v:
+                        return f"{label}: 더움"
+                elif label == "습도":
+                    if min_v is not None and v < min_v:
+                        return f"{label}: 건조함"
+                    if max_v is not None and v > max_v:
+                        return f"{label}: 습함"
+                elif label == "조도":
+                    if min_v is not None and v < min_v:
+                        return f"{label}: 어두움"
+                    if max_v is not None and v > max_v:
+                        return f"{label}: 밝음"
+
                 return f"{label}: 적정"
             except (ValueError, TypeError):
                 return f"{label}: 측정값 오류"
@@ -428,7 +497,6 @@ class PersonaChatbot:
             check_range(cur_info.get("light"), env_info.get("min_light"), env_info.get("max_light"), "조도"),
         ]
 
-        # 측정 시간은 옵션으로 남겨도 됨
         if cur_info.get("timestamp"):
             status_list.append(f"측정 시간: {cur_info['timestamp']}")
 
