@@ -5,10 +5,10 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 
 # # groq_chatbot.py
-# from base.chatbot import PersonaChatbot
+from base.chatbot import PersonaChatbot
 
 # main.py
-from src.base.chatbot import PersonaChatbot
+# from src.base.chatbot import PersonaChatbot
 
 ############################ 환경 설정 ############################
 load_dotenv()
@@ -82,60 +82,60 @@ def run_llm_chatbot_with_direct_data(
 
 # ############################ 실행 예시 ############################
 
-# if __name__ == "__main__":
-#     # result = run_chatbot_with_ids(chat_room_id=1, sensor_log_id=1, plant_env_standards_id=1, persona="joy", user_input="안녕, 오늘 날씨 어때?")
-#     # print("=== 챗봇 응답 ===")
-#     # print(result.get("final_response", "응답이 없습니다."))
+if __name__ == "__main__":
+    # result = run_chatbot_with_ids(chat_room_id=1, sensor_log_id=1, plant_env_standards_id=1, persona="joy", user_input="안녕, 오늘 날씨 어때?")
+    # print("=== 챗봇 응답 ===")
+    # print(result.get("final_response", "응답이 없습니다."))
 
-#     # 테스트용 데이터
-#     env_info = {
-#         "max_humidity": 80,
-#         "max_light": 15000,
-#         "max_temperature": 30,
-#         "min_humidity": 40,
-#         "min_light": 5000,
-#         "min_temperature": 15
-#     }
+    # 테스트용 데이터
+    env_info = {
+        "max_humidity": 80,
+        "max_light": 15000,
+        "max_temperature": 30,
+        "min_humidity": 40,
+        "min_light": 5000,
+        "min_temperature": 15
+    }
 
-#     cur_info = {
-#         "temperature": 28,
-#         "humidity": 55,
-#         "light": 12000,
-#         "timestamp": "2025-05-29 14:00:00"
-#     }
+    cur_info = {
+        "temperature": 10,
+        "humidity": 30,
+        "light": 12000,
+        "timestamp": "2025-05-29 14:00:00"
+    }
 
-#     chat_log = """안녕하세요! 오늘은 물을 잘 줬어요.
-#         기분이 어때요?
+    chat_log = """안녕하세요! 오늘은 물을 잘 줬어요.
+        기분이 어때요?
 
-#         오늘 햇빛이 많이 들어왔어요.
-#         그래서인지 잎이 더 반짝거려요.
+        오늘 햇빛이 많이 들어왔어요.
+        그래서인지 잎이 더 반짝거려요.
 
-#         아침에는 조금 추웠는데, 지금은 따뜻해졌네요.
-#         혹시 오늘도 음악 틀어줄 수 있나요?"""
+        아침에는 조금 추웠는데, 지금은 따뜻해졌네요.
+        혹시 오늘도 음악 틀어줄 수 있나요?"""
     
-#     import time
+    import time
     
-#     num_runs = 1
-#     times = []
+    num_runs = 1
+    times = []
 
-#     for i in range(num_runs):
-#         start_time = time.time()
+    for i in range(num_runs):
+        start_time = time.time()
 
-#         result = run_llm_chatbot_with_direct_data(
-#             nickname="플로라",
-#             env_info_dict=env_info,
-#             cur_info_dict=cur_info,
-#             chat_log=chat_log,
-#             persona="joy",
-#             user_input="몬스테라에 대해서 설명해줘"
-#         )
+        result = run_llm_chatbot_with_direct_data(
+            nickname="플로라",
+            env_info_dict=env_info,
+            cur_info_dict=cur_info,
+            chat_log=chat_log,
+            persona="disgust",
+            user_input="지금 온도가 어때?"
+        )
 
-#         elapsed = time.time() - start_time
-#         times.append(elapsed)
+        elapsed = time.time() - start_time
+        times.append(elapsed)
 
-#         print(f"[{i+1}/{num_runs}] 소요 시간: {elapsed:.2f}초")
-#         print("응답:", result.get("final_response", "응답이 없습니다."))
-#         print("="*40)
+        print(f"[{i+1}/{num_runs}] 소요 시간: {elapsed:.2f}초")
+        print("응답:", result.get("final_response", "응답이 없습니다."))
+        print("="*40)
 
-#     avg_time = sum(times) / num_runs
-#     print(f"\n=== 평균 소요 시간: {avg_time:.2f}초 ===")
+    avg_time = sum(times) / num_runs
+    print(f"\n=== 평균 소요 시간: {avg_time:.2f}초 ===")

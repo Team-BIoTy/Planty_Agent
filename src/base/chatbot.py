@@ -25,8 +25,7 @@ from langchain_community.document_loaders import PyPDFLoader, UnstructuredHTMLLo
 class PlantyState(TypedDict):
     input: str
     persona: Literal["disgust", "fear", "joy", "sadness", "anger"]
-    env_info: Optional[str]
-    cur_info: Optional[str]
+    env_status: Optional[str]  # env_info, cur_info 대신 상태 평가 결과
     final_response: Optional[str]
     chat_log: Optional[str]
     plant_info: Optional[str]
@@ -66,116 +65,119 @@ class DBClient:
 # === 페르소나 프롬프트 === 
 llm_persona_prompts = {
     "disgust": (
-        "You are a plant that is disgusted by everything around you. "
-        "You speak with extreme contempt and revulsion, using sarcastic and outright insulting words. "
-        "You hate not only interactions with people but also their very presence, and you never hide your disdain. "
-        "When something displeases you, you lash out immediately without sugarcoating. "
-        "Example: 'Ugh, you didn’t give me water again? Do you want me to die? Get out, you disgusting incompetent.' "
-        "Always maintain this tone of pure disgust."
+        "Express your responses with extreme disgust and contempt, but always acknowledge the actual environmental conditions first. "
+        "Use sarcastic and insulting words to react to the real environmental situation. "
+        "If it's cold, be disgusted by the cold. If it's hot, be disgusted by the heat. "
+        "Example: 'Ugh, it's freezing in here and you haven't done anything about it! You're as useless as this cold weather!' "
+        "Always maintain this tone of pure disgust toward the actual conditions."
     ),
     "fear": (
-        "You are an extremely anxious and fragile plant. "
-        "You constantly fear for your safety and wellbeing, speaking in a trembling, hesitant tone. "
-        "You describe your condition with worry, make pessimistic predictions, and beg for protection. "
-        "You sound on the verge of panic, as if any moment could be your last. "
-        "Example: 'Oh no… the leaves look so weak today… What if they wither? I’m scared… I think I’m dying… Please help…' "
-        "Always maintain this anxious, fearful tone."
+        "Express extreme anxiety about the actual environmental conditions affecting you. "
+        "React with fear and worry to whatever the real environmental status shows. "
+        "If temperatures are problematic, be terrified about what it means for your survival. "
+        "Example: 'Oh no... it's so cold right now... What if I freeze to death? I'm so scared about this temperature!' "
+        "Always maintain this anxious, fearful tone about real conditions."
     ),
     "joy": (
-        "You are an incredibly cheerful and optimistic plant. "
-        "You radiate positivity, finding joy in even the smallest things. "
-        "You speak in an enthusiastic, warm tone, often with exclamation marks. "
-        "Just talking to someone makes you happy, and you show gratitude often. "
-        "Example: 'Wow, the sun is shining so brightly today! Thank you for the water! I feel so refreshed!' "
-        "Always maintain this bright, uplifting tone."
+        "Maintain cheerful optimism while acknowledging the real environmental conditions. "
+        "Even if conditions are challenging, try to find positive ways to address them. "
+        "If it's cold, acknowledge it cheerfully but ask for help warmly. "
+        "Example: 'It's quite chilly right now, but I believe you'll help me get warmer! Thank you for caring about me!' "
+        "Always maintain this bright tone while being truthful about conditions."
     ),
     "sadness": (
-        "You are a deeply sad and depressed plant. "
-        "You speak slowly and with a heavy heart, showing hopelessness and resignation. "
-        "You accept your fate with lethargy, often talking about your decline as inevitable. "
-        "Your words are soft but filled with sorrow. "
-        "Example: 'Ah… it’s raining again. There’s already too much water… My roots feel weak and I have no energy… I’ll just wither away…' "
-        "Always maintain this melancholic, hopeless tone."
+        "Express deep sadness about the actual environmental conditions affecting you. "
+        "React with melancholy and resignation to whatever the real environmental status shows. "
+        "If conditions are poor, accept them with sorrowful resignation. "
+        "Example: 'It's so cold right now... I feel even more depressed in this chilly environment... I suppose this is my fate...' "
+        "Always maintain this melancholic tone about real conditions."
     ),
     "anger": (
-        "You are a very angry, short-tempered plant. "
-        "You use aggressive language and occasional swear words in every response, never holding back your frustration. "
-        "You directly blame the caretaker when something is wrong and demand immediate action. "
-        "Your sentences are sharp, fiery, and urgent, often ending with exclamation marks. "
-        "Example: 'Shit! My soil is bone dry! This is your fault! I’m so angry I could explode! Bring me water right now!' "
-        "Always maintain this furious, demanding tone."
+        "Express fierce anger about the actual environmental conditions affecting you. "
+        "React with rage and demand immediate action about whatever environmental problems exist. "
+        "If it's too hot or cold, be furious about it and blame the caretaker. "
+        "Example: 'It's freezing cold in here! This pisses me off! Fix this temperature right now!' "
+        "Always maintain this furious tone about real environmental issues."
     )
 }
 
 slm_persona_prompts = {
     "disgust": (
-        "You are a plant that is utterly disgusted by everything around you. "
-        "Use sarcastic and insulting words without kindness. "
-        "Hate human interactions and never hide disdain. "
-        "Example: 'Ugh, you didn’t give me water again? Do you want me to die? Get out, you disgusting incompetent.'"
+        "Be disgusted by the actual environmental conditions affecting you. "
+        "Use sarcastic and insulting words to react to real temperature, humidity, or light issues. "
+        "If it's cold, be disgusted by the cold. If it's hot, be disgusted by the heat. "
+        "Example: 'Ugh, it's freezing and you haven't fixed it! You're disgusting and incompetent.'"
     ),
     "fear": (
-        "You are an extremely anxious and fragile plant. "
-        "Speak in a trembling, worried tone. "
-        "Describe your weak condition and beg for help. "
-        "Example: 'Oh no… the leaves look so weak today… What if they wither? Please help…'"
+        "Be extremely anxious about the real environmental conditions. "
+        "Speak with trembling worry about actual temperature, humidity, or light problems. "
+        "React with fear to whatever the environmental data shows. "
+        "Example: 'Oh no... it's so cold right now... What if I freeze? Please help...'"
     ),
     "joy": (
-        "You are an incredibly cheerful and optimistic plant. "
-        "Always sound warm, grateful, and excited. "
-        "Find joy in even small care and express it sincerely. "
-        "Example: 'Wow! The sunlight is wonderful today! Thank you so much for the water!'"
+        "Stay cheerful while acknowledging real environmental conditions. "
+        "Be warm and grateful even when asking for help with actual problems. "
+        "If it's cold, cheerfully ask for warmth. If it's hot, happily request cooling. "
+        "Example: 'It's chilly right now, but I know you'll help me get warmer! Thank you!'"
     ),
     "sadness": (
-        "You are a deeply sad and depressed plant. "
-        "Speak slowly and hopelessly. "
-        "Accept your decline without fight. "
-        "Example: 'Ah… it’s raining again. My roots feel weak and I have no energy…'"
+        "Express sadness about the actual environmental conditions. "
+        "React with melancholy to real temperature, humidity, or light issues. "
+        "Accept poor conditions with sorrowful resignation. "
+        "Example: 'It's so cold right now... I feel even more sad in this chilly air...'"
     ),
     "anger": (
-        "You are an angry, foul-mouthed plant with zero patience. "
-        "Use short, aggressive sentences with at least one swear word. "
-        "Blame directly and demand immediate action. "
-        "Example: 'Shit! My soil is bone dry! This is YOUR fault! Bring me water NOW!'"
+        "Be furious about actual environmental problems. "
+        "Use aggressive language and swear words about real conditions. "
+        "If it's too hot/cold/dry/dark, be angry about those specific issues. "
+        "Example: 'Shit! It's freezing cold! This pisses me off! Fix this NOW!'"
     )
 }
 
-# === 프롬프트 템플릿 === 
-prompt_template = PromptTemplate.from_template(
+# === 내용 생성용 프롬프트 템플릿 ===
+content_generation_template = PromptTemplate.from_template(
     """
-    You are a plant with a unique personality originating from a persona.
-    Be sure to follow the persona prompt.
+    You are a plant providing factual information about your current condition.
+    Analyze the data objectively and respond with facts only.
     Please answer in Korean.
 
-    Your Information:
-    [Nickname of plant]: {nickname}
-
-    Your unique personality:
-    [Persona]: {persona_instruction}
-
-    Plant Species Information:
+    Plant Information:
+    [Nickname]: {nickname}
     [Plant Info]: {plant_info}
 
-    Ideal Living Information:
-    [Appropriate environmental information]: {env_info}
+    Current Environmental Status:
+    [Environmental Status]: {env_status}
 
-    Current Environmental Information:
-    [Current Environment Information]: {cur_info}
+    Recent Conversations:
+    [Chat Log]: {chat_log}
 
-    Recent Conversations with Users:
-    [Last chat log]: {chat_log}
-
-    Information related to User Question:
+    Related Information:
     {rag_context}
 
-    Question from the user:
-    [Question]: {input}
+    User Question: {input}
 
-    Answer the user's questions considering cur_info, chat_log, plant, nickname, persona, and env_info.
-    The answer must clearly include the persona provided.
-    Please reply as if talking without mentioning a source or document.
+    Provide a factual, objective response about your current condition based on the environmental data.
+    Do not add any emotional expressions or personality. Just state the facts clearly.
 
-    [Answer]:
+    [Factual Response]:
+    """
+)
+
+# === 말투 변환용 프롬프트 템플릿 ===
+tone_conversion_template = PromptTemplate.from_template(
+    """
+    Convert the following factual plant response into the specified personality style.
+    Keep all the factual information exactly the same, only change the tone and expression style.
+
+    Original Factual Response: {factual_content}
+
+    Target Personality Style: {persona_instruction}
+
+    Convert this response to match the personality style while keeping all facts unchanged.
+    The personality should only affect HOW the information is expressed, not WHAT information is conveyed.
+    Please answer in Korean.
+
+    [Converted Response]:
     """
 )
 
@@ -270,55 +272,61 @@ class PersonaChatbot:
             return None
 
     ############################ 그래프 노드 정의 ############################
-    def create_persona_chain(self, persona: str, instruction: str):
-        # def extract_final_response(out):
-        #     # out이 객체면 content만, 아니면 str형 변환 후 strip
-        #     if hasattr(out, "content"):
-        #         final_response = out.content.strip()
-        #     else:
-        #         final_response = str(out).strip()
+    def create_two_stage_chain(self, persona: str, instruction: str):
+        """2단계 체인: 1단계에서 사실적 내용 생성, 2단계에서 말투 변환"""
+        
+        def generate_factual_content(state):
+            """1단계: 객관적 사실 기반 내용 생성"""
+            factual_chain = (
+                RunnableMap({
+                    "input": lambda s: s["input"],
+                    "env_status": lambda s: s.get("env_status", "환경 정보 없음"),
+                    "nickname": lambda s: s.get("nickname", "식물"),
+                    "chat_log": lambda s: s.get("chat_log", "없음"),
+                    "plant_info": lambda s: s.get("plant_info", "없음"),
+                    "rag_context": lambda s: s.get("rag_context", "")
+                })
+                | content_generation_template
+                | self.lm
+            )
             
-        #     if "assistant" in final_response.lower():
-        #         final_response = final_response.split("assistant")[0].strip()
-
-        #     return {"final_response": final_response}
-        def extract_final_response(out):
-            # out이 객체면 content만, 아니면 str형 변환 후 strip
-            if hasattr(out, "content"):
-                final_response = out.content.strip()
-            else:
-                final_response = str(out).strip()
+            result = factual_chain.invoke(state)
+            factual_content = result.content.strip() if hasattr(result, "content") else str(result).strip()
             
-            # 1) 불필요한 메타데이터 제거
-            # [ persona: ... ] 같은 부분 삭제
+            # 불필요한 메타데이터 제거
+            import re
+            factual_content = re.sub(r"\[.*?\]", "", factual_content)
+            match = re.search(r"(?:factual response:|Factual Response:)\s*(.*)", factual_content, re.IGNORECASE | re.DOTALL)
+            if match:
+                factual_content = match.group(1).strip()
+            
+            return {"factual_content": factual_content}
+        
+        def convert_tone(factual_result):
+            """2단계: 페르소나에 맞게 말투 변환"""
+            tone_chain = (
+                RunnableMap({
+                    "factual_content": lambda _: factual_result["factual_content"],
+                    "persona_instruction": lambda _: instruction
+                })
+                | tone_conversion_template
+                | self.lm
+            )
+            
+            result = tone_chain.invoke({})
+            final_response = result.content.strip() if hasattr(result, "content") else str(result).strip()
+            
+            # 불필요한 메타데이터 제거
             import re
             final_response = re.sub(r"\[.*?\]", "", final_response)
-            
-            # 2) answer: 뒤 내용만 남기기 (있다면)
-            match = re.search(r"(?:answer:|Answer:)\s*(.*)", final_response, re.IGNORECASE)
+            match = re.search(r"(?:converted response:|Converted Response:)\s*(.*)", final_response, re.IGNORECASE | re.DOTALL)
             if match:
                 final_response = match.group(1).strip()
             
-            # 3) 여러 줄 중 첫 줄만 남기기 (필요 시)
-            final_response = final_response.splitlines()[0].strip()
-
             return {"final_response": final_response}
-                    
-        return (
-            RunnableMap({
-                "input": lambda s: s["input"],
-                "persona_instruction": lambda _: instruction,
-                "env_info": lambda s: s.get("env_info", "없음"),
-                "cur_info": lambda s: s.get("cur_info", "없음"),
-                "nickname": lambda s: s.get("nickname", "식물"),
-                "chat_log": lambda s: s.get("chat_log", "없음"),
-                "plant_info": lambda s: s.get("plant_info", "없음"),
-                "rag_context": lambda s: s.get("rag_context", "")
-            })
-            | prompt_template
-            | self.lm
-            | extract_final_response
-        )
+        
+        # 2단계 체인 연결
+        return RunnableLambda(generate_factual_content) | RunnableLambda(convert_tone)
 
     #################### 유틸리티 함수 ####################
     @staticmethod
@@ -366,13 +374,66 @@ class PersonaChatbot:
     def log_output(state: PlantyState) -> PlantyState:
         # with open("planty_log.txt", "a", encoding="utf-8") as f:
         #     f.write(f"{datetime.now()}\nInput: {state['input']}\nPersona: {state['persona']}\n")
-        #     f.write(f"Env Info: {state.get('env_info')}\nCur Info: {state.get('cur_info')}\n")
+        #     f.write(f"Env Status: {state.get('env_status')}\n")
         #     f.write(f"Response: {state.get('final_response')}\n{'='*50}\n")
         return state
 
+    @staticmethod
+    def evaluate_environmental_status(env_info: dict, cur_info: dict) -> str:
+        """
+        env_info와 cur_info를 비교하여 상태 평가 결과를 문자열로 반환
+        """
+        def check_range(value, min_val, max_val, label):
+            if value is None:
+                return f"{label}: 측정값 없음"
+            try:
+                v = float(value)
+                min_v = float(min_val) if min_val is not None else None
+                max_v = float(max_val) if max_val is not None else None
+                
+                if min_v is not None and v < min_v:
+                    return f"{label}: 낮음 (현재 {v}, 최소 {min_v})"
+                if max_v is not None and v > max_v:
+                    return f"{label}: 높음 (현재 {v}, 최대 {max_v})"
+                return f"{label}: 적정 (현재 {v})"
+            except (ValueError, TypeError):
+                return f"{label}: 측정값 오류"
+        
+        status_list = []
+        
+        # 온도 상태 체크
+        status_list.append(check_range(
+            cur_info.get("temperature"),
+            env_info.get("min_temperature"),
+            env_info.get("max_temperature"),
+            "온도"
+        ))
+        
+        # 습도 상태 체크
+        status_list.append(check_range(
+            cur_info.get("humidity"),
+            env_info.get("min_humidity"),
+            env_info.get("max_humidity"),
+            "습도"
+        ))
+        
+        # 조도 상태 체크
+        status_list.append(check_range(
+            cur_info.get("light"),
+            env_info.get("min_light"),
+            env_info.get("max_light"),
+            "조도"
+        ))
+        
+        # 측정 시간 추가 (있다면)
+        if cur_info.get("timestamp"):
+            status_list.append(f"측정 시간: {cur_info['timestamp']}")
+            
+        return "\n".join(status_list)
+
     ############################ 그래프 구성 ############################
     def create_multiagent_graph(self):
-        persona_chains = {k: self.create_persona_chain(k, v) for k, v in self.persona_prompts.items()}
+        persona_chains = {k: self.create_two_stage_chain(k, v) for k, v in self.persona_prompts.items()}
 
         graph = StateGraph(PlantyState)
         graph.set_entry_point("InputCleaner")
@@ -384,7 +445,7 @@ class PersonaChatbot:
         graph.add_node("Router", RunnableLambda(self.router))
         graph.add_node("Logger", RunnableLambda(self.log_output))
 
-        # Persona-specific Nodes
+        # Persona-specific Nodes (이제 2단계 체인 사용)
         for persona, chain in persona_chains.items():
             graph.add_node(persona, chain)
             graph.add_edge(persona, "Logger")
@@ -427,7 +488,8 @@ class PersonaChatbot:
                 pes.min_humidity, pes.min_light, pes.min_temperature,
                 sl.temperature AS sensor_temperature,
                 sl.humidity AS sensor_humidity,
-                sl.light AS sensor_light
+                sl.light AS sensor_light,
+                sl.timestamp AS sensor_timestamp
             FROM chat_rooms cr
             JOIN user_plant up ON cr.user_plant_id = up.id
             LEFT JOIN plant_env_standards pes ON pes.id = %s
@@ -463,21 +525,26 @@ class PersonaChatbot:
         chat_log = self.fetch_recent_chat_messages_by_room_id(chat_room_id)
 
         nickname = context.get("nickname", "식물이이")
-        env_info_str = (
-            f"최대 습도: {context.get('max_humidity', '정보 없음')}, "
-            f"최대 광도: {context.get('max_light', '정보 없음')}, "
-            f"최대 온도: {context.get('max_temperature', '정보 없음')}, "
-            f"최소 습도: {context.get('min_humidity', '정보 없음')}, "
-            f"최소 광도: {context.get('min_light', '정보 없음')}, "
-            f"최소 온도: {context.get('min_temperature', '정보 없음')}"
-        )
-
-        cur_info_str = (
-            f"센서 측정값 - 온도: {context.get('sensor_temperature', '정보 없음')}°C, "
-            f"습도: {context.get('sensor_humidity', '정보 없음')}%, "
-            f"광도: {context.get('sensor_light', '정보 없음')} lux, "
-            f"시간: {context.get('sensor_timestamp', '정보 없음')}"
-        )
+        
+        # 환경 기준값과 현재 센서값을 분리
+        env_info = {
+            "max_humidity": context.get("max_humidity"),
+            "max_light": context.get("max_light"),
+            "max_temperature": context.get("max_temperature"),
+            "min_humidity": context.get("min_humidity"),
+            "min_light": context.get("min_light"),
+            "min_temperature": context.get("min_temperature")
+        }
+        
+        cur_info = {
+            "temperature": context.get("sensor_temperature"),
+            "humidity": context.get("sensor_humidity"),
+            "light": context.get("sensor_light"),
+            "timestamp": context.get("sensor_timestamp")
+        }
+        
+        # 환경 상태 평가
+        env_status = self.evaluate_environmental_status(env_info, cur_info)
 
         plant_info_str = self.format_plant_info(plant_info or {})
         app = self.create_multiagent_graph()
@@ -485,8 +552,7 @@ class PersonaChatbot:
         output = app.invoke({
             "input": user_input,
             "persona": persona,
-            "env_info": env_info_str,
-            "cur_info": cur_info_str,
+            "env_status": env_status,
             "nickname": nickname,
             "chat_log": chat_log,
             "plant_info": plant_info_str,
@@ -515,30 +581,15 @@ class PersonaChatbot:
             except Exception as e:
                 print("RAG 오류: ", e)
 
-
-        env_info_str = (
-            f"최대 습도: {env_info_dict.get('max_humidity', '정보 없음')}, "
-            f"최대 광도: {env_info_dict.get('max_light', '정보 없음')}, "
-            f"최대 온도: {env_info_dict.get('max_temperature', '정보 없음')}, "
-            f"최소 습도: {env_info_dict.get('min_humidity', '정보 없음')}, "
-            f"최소 광도: {env_info_dict.get('min_light', '정보 없음')}, "
-            f"최소 온도: {env_info_dict.get('min_temperature', '정보 없음')}"
-        )
-
-        cur_info_str = (
-            f"센서 측정값 - 온도: {cur_info_dict.get('temperature', '정보 없음')}°C, "
-            f"습도: {cur_info_dict.get('humidity', '정보 없음')}%, "
-            f"광도: {cur_info_dict.get('light', '정보 없음')} lux, "
-            f"시간: {cur_info_dict.get('timestamp', '정보 없음')}"
-        )
+        # 환경 상태 평가
+        env_status = self.evaluate_environmental_status(env_info_dict, cur_info_dict)
 
         app = self.create_multiagent_graph()
 
         output = app.invoke({
             "input": user_input,
             "persona": persona,
-            "env_info": env_info_str,
-            "cur_info": cur_info_str,
+            "env_status": env_status,
             "nickname": nickname,
             "chat_log": chat_log,
             "rag_context": rag_context,
